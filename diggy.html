@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Diggy</title>
+
+  <script src="https://unpkg.com/@ruffle-rs/ruffle"></script>
+
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    html,body { height:100%; margin:0; background:#000; }
+    #container { width:100%; height:100vh; display:flex; align-items:center; justify-content:center; }
+    #flash { width:100%; height:100%; }
+    .hint { position: absolute; left:12px; bottom:12px; background: rgba(255,255,255,0.04); color:#ddd; padding:6px 8px; font-size:13px; border-radius:6px; }
+  </style>
+</head>
+<body>
+  <div id="container">
+    <div id="flash"></div>
+  </div>
+
+  <div class="hint">If embedding in Google Sites, use the page URL (Insert → Embed → By URL).</div>
+
+  <script>
+    const GAME_FILE = "diggy.swf";
+
+    window.addEventListener("DOMContentLoaded", () => {
+      try {
+        const ruffle = window.RufflePlayer?.newest();
+        if (!ruffle) {
+          console.error("Ruffle not found. Check script tag or local ruffle.js.");
+          return;
+        }
+        const player = ruffle.createPlayer();
+        player.style.width = "100%";
+        player.style.height = "100%";
+        document.getElementById("flash").appendChild(player);
+        player.load(GAME_FILE);
+      } catch (err) {
+        console.error("Error initializing Ruffle:", err);
+      }
+    });
+  </script>
+</body>
+</html>
