@@ -2,140 +2,139 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"/>
-<title>.sol Easy Editor — find & edit numeric fields</title>
+<title>.sol Value Finder & Editor (multi-encoding, labeled)</title>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <style>
-  :root{--bg:#07121a;--panel:#0f2430;--muted:#9fb8d9;--accent:#56a6ff;--card:#0b1a22}
-  body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;margin:0;background:var(--bg);color:#e6eef6}
-  header{padding:16px 20px;border-bottom:1px solid rgba(255,255,255,0.03)}
+  body{font-family:system-ui,Segoe UI,Arial;background:#07121a;color:#e6eef6;margin:0}
+  header{padding:14px 18px;border-bottom:1px solid rgba(255,255,255,0.03)}
   h1{margin:0;font-size:18px}
-  .wrap{display:flex;gap:16px;padding:18px;flex-wrap:wrap}
-  .col{background:var(--panel);border-radius:10px;padding:14px;box-shadow:0 6px 18px rgba(0,0,0,0.5)}
-  .wide{flex:1 1 720px;min-width:300px}
-  .narrow{width:320px;min-width:260px}
-  label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px}
-  input[type="text"], input[type="file"], select, textarea{width:100%;box-sizing:border-box;padding:8px;border-radius:6px;border:1px solid rgba(255,255,255,0.04);background:var(--card);color:#dfeefc}
-  button{background:var(--accent);color:#012634;border:0;padding:8px 10px;border-radius:8px;font-weight:600;cursor:pointer}
-  button.secondary{background:#2b4857;color:#d9eefc}
-  .small{font-size:13px;color:var(--muted)}
-  .controls{display:flex;gap:8px;flex-wrap:wrap}
-  table{width:100%;border-collapse:collapse;margin-top:12px;font-family:monospace;color:#dfeefc}
-  th,td{padding:6px;border-bottom:1px dashed rgba(255,255,255,0.03);text-align:left;font-size:13px}
-  th{color:var(--muted);font-weight:600}
-  .hex{font-family:monospace;background:#071821;padding:8px;border-radius:6px;color:#9be3ff}
-  .tag{display:inline-block;background:rgba(255,255,255,0.03);padding:4px 8px;border-radius:999px;color:var(--muted);font-size:12px}
+  .wrap{display:flex;gap:14px;padding:16px;flex-wrap:wrap}
+  .panel{background:#0f2530;border-radius:10px;padding:12px;box-sizing:border-box}
+  .left{width:320px}
+  .right{flex:1;min-width:320px}
+  label{display:block;color:#9fb8d9;font-size:13px;margin-bottom:6px}
+  input[type="file"], input[type="text"], select {width:100%;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:#071821;color:#dff2ff}
+  button{background:#56a6ff;color:#002333;border:0;padding:8px 10px;border-radius:8px;cursor:pointer;font-weight:700}
+  button.secondary{background:#2b4857;color:#dfeefc}
+  .small{font-size:13px;color:#a9cbe8}
+  table{width:100%;border-collapse:collapse;margin-top:10px;font-family:monospace}
+  th,td{padding:6px;border-bottom:1px dashed rgba(255,255,255,0.03);font-size:13px;text-align:left}
+  th{color:#9fb8d9}
+  .hex{background:#071821;padding:6px;border-radius:6px;color:#9be3ff;display:inline-block}
+  .tag{background:rgba(255,255,255,0.03);padding:4px 8px;border-radius:999px;color:#a9cbe8;font-size:12px}
   .ok{color:#9fffcb}
   .warn{color:#ffd28a}
-  footer{padding:12px 18px;color:var(--muted);font-size:13px}
-  .result-row td{vertical-align:top}
-  .action-btn{background:#2b4857;border-radius:6px;padding:6px 8px;color:#dfeefc;border:0;cursor:pointer}
-  .inline-input{width:110px;padding:6px 8px;border-radius:6px;background:#071821;color:#dfeefc;border:1px solid rgba(255,255,255,0.03)}
-  .note{margin-top:10px;color:var(--muted);font-size:13px}
+  .input-inline{width:120px;padding:6px;border-radius:6px;border:1px solid rgba(255,255,255,0.03);background:#071821;color:#dfeefc}
+  .action{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
 </style>
 </head>
 <body>
   <header>
-    <h1>.sol Easy Editor — find & edit numeric fields (AMF-friendly)</h1>
-    <div style="margin-top:8px" class="small">Load a .sol save, search a field name (e.g. <code>m_coins</code>), inspect and change values safely. Always backup first.</div>
+    <h1>.sol Value Finder & Editor — multi-encoding, labeled</h1>
+    <div class="small" style="margin-top:6px">Upload .sol → search value or field name → inspect labeled matches → edit and download. Always keep a backup.</div>
   </header>
 
   <div class="wrap">
-    <div class="col narrow">
+    <div class="panel left">
       <label>1) Choose .sol file</label>
       <input id="fileInput" type="file" accept=".sol,application/octet-stream"/>
-      <div style="margin-top:8px" class="controls">
+      <div style="margin-top:8px" class="small">Loaded file: <span id="fileName">none</span></div>
+      <div style="margin-top:10px">
         <button id="downloadBackup" class="secondary" disabled>Download backup</button>
         <button id="resetBtn" class="secondary" disabled>Reset edits</button>
       </div>
 
-      <hr style="border:none;height:10px"/>
+      <hr style="margin:12px 0;border:none;border-top:1px solid rgba(255,255,255,0.03)">
 
-      <label>2) Field name to find (case sensitive)</label>
-      <input id="fieldName" type="text" placeholder="e.g. m_coins or playerMoney"/>
-      <div style="margin-top:8px" class="controls">
-        <button id="findBtn" disabled>Find field</button>
-        <button id="scanAllBtn" disabled class="secondary">Scan for ASCII strings</button>
+      <label>2) Find by field name (ASCII key)</label>
+      <input id="fieldName" type="text" placeholder="e.g. m_coins"/>
+      <div style="margin-top:8px"><button id="findFieldBtn" disabled>Find key</button></div>
+
+      <hr style="margin:12px 0;border:none;border-top:1px solid rgba(255,255,255,0.03)">
+
+      <label>3) Find by numeric value</label>
+      <input id="valueSearch" type="text" placeholder="e.g. 190  or hex DEADBEEF"/>
+      <div style="margin-top:8px" class="action">
+        <button id="findValueBtn" disabled>Search value</button>
+        <select id="valueMode" class="input-inline" title="How to interpret typed value">
+          <option value="dec">decimal</option>
+          <option value="hex">hex</option>
+        </select>
       </div>
 
-      <div style="margin-top:12px">
-        <label>3) Quick find by value</label>
-        <input id="valueSearch" type="text" placeholder="e.g. 190  (search number or hex like DEADBEEF)"/>
-        <div style="margin-top:8px" class="controls">
-          <button id="findByValue" class="secondary" disabled>Find value</button>
+      <div style="margin-top:10px" class="small">Search tries: <span class="tag">Float64 BE/LE</span> <span class="tag">Int32 BE/LE</span> <span class="tag">ASCII</span>. Matches show the nearest ASCII key (if any).</div>
+    </div>
+
+    <div class="panel right">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <label style="margin:0">Matches & edit tool</label>
+        <div>
+          <button id="saveBtn" disabled>Download edited .sol</button>
+          <button id="applyAllBtn" class="secondary" disabled>Apply same edit to all</button>
         </div>
       </div>
 
-      <div style="margin-top:14px" class="small">
-        <div><span class="tag">Auto-detect</span> the tool tries AMF float64 (0x00+8 bytes), 32-bit ints, and ASCII number strings near the key.</div>
-      </div>
-    </div>
+      <table id="resultsTable" aria-live="polite">
+        <thead>
+          <tr><th>Offset</th><th>Nearest key / label</th><th>Context (hex)</th><th>Detected</th><th>Edit</th></tr>
+        </thead>
+        <tbody id="resultsBody">
+          <tr><td colspan="5" class="small">No file loaded.</td></tr>
+        </tbody>
+      </table>
 
-    <div class="col wide">
-      <label>Results — occurrences found</label>
-      <div id="resultsWrap" style="max-height:560px;overflow:auto;background:transparent;padding:8px;border-radius:8px">
-        <table id="resultsTable" aria-live="polite">
-          <thead>
-            <tr><th>Offset</th><th>Context (hex)</th><th>Detected value(s)</th><th>Edit</th></tr>
-          </thead>
-          <tbody id="resultsBody">
-            <tr><td colspan="4" class="small">Load a .sol and search a field to see occurrences</td></tr>
-          </tbody>
-        </table>
-      </div>
-
-      <div style="margin-top:12px" class="controls">
-        <button id="saveBtn" disabled>Download edited .sol</button>
-        <button id="applyAllBtn" class="secondary" disabled>Apply same edit to all</button>
-      </div>
-
-      <div class="note">Tips: prefer changing number via <strong>Set as Float64 (AMF)</strong> when the detection shows an AMF number. Use Int32 for integer-only values. ASCII changes must preserve or carefully pad length.</div>
+      <div class="small" style="margin-top:10px">If multiple matches show up for the same numeric value (like many `190`s), use the nearest key name and hex context to pick the coin field. If you want, use "Apply same edit to all" after confirming the first edit works in-game.</div>
     </div>
   </div>
 
-  <footer>
-    <div class="small">Built for many AMF-based .sol saves. If a field isn't found, try scanning for nearby ASCII names or use the value search. If unsure, ask for help and provide the hex context (don't share private data).</div>
-  </footer>
-
 <script>
-/* Single-file .sol helper: load => find key occurrences => detect numeric encodings => edit => save.
-   Designed to be simple for non-experts.
+/* .sol Value Finder & Editor (single-file)
+   - loads a .sol into `bytes` (Uint8Array)
+   - supports searching by ASCII key name AND by numeric value (multiple encodings)
+   - finds nearest ASCII key label for every hit for easier identification
+   - shows decoded values for likely encodings and allows inline editing
+   - writes back into bytes and allows download
 */
 
 // Globals
-let originalBytes = null; // Uint8Array original
-let bytes = null;         // working copy
-let filename = "";
+let originalBytes = null;
+let bytes = null;
+let filename = '';
+const ctxRadius = 24; // how many bytes of context to show
+
+// DOM
 const fileInput = document.getElementById('fileInput');
-const findBtn = document.getElementById('findBtn');
-const scanAllBtn = document.getElementById('scanAllBtn');
-const resetBtn = document.getElementById('resetBtn');
+const fileNameSpan = document.getElementById('fileName');
 const downloadBackup = document.getElementById('downloadBackup');
-const resultsBody = document.getElementById('resultsBody');
-const fieldNameInput = document.getElementById('fieldName');
+const resetBtn = document.getElementById('resetBtn');
+const findFieldBtn = document.getElementById('findFieldBtn');
+const findValueBtn = document.getElementById('findValueBtn');
 const saveBtn = document.getElementById('saveBtn');
 const applyAllBtn = document.getElementById('applyAllBtn');
-const findByValueBtn = document.getElementById('findByValue');
+const fieldNameInput = document.getElementById('fieldName');
 const valueSearchInput = document.getElementById('valueSearch');
+const valueMode = document.getElementById('valueMode');
+const resultsBody = document.getElementById('resultsBody');
 
-fileInput.addEventListener('change', async (e)=>{
+fileInput.addEventListener('change', async (e) => {
   const f = e.target.files[0];
-  if(!f) return;
+  if (!f) return;
   filename = f.name;
+  fileNameSpan.textContent = filename;
   const ab = await f.arrayBuffer();
   originalBytes = new Uint8Array(ab);
-  bytes = new Uint8Array(originalBytes); // copy
-  setEnabled(true);
-  resultsBody.innerHTML = '<tr><td colspan="4" class="small">File loaded. Enter a field name like <code>m_coins</code> and click Find field.</td></tr>';
+  bytes = new Uint8Array(originalBytes); // working copy
+  enableUI(true);
+  resultsBody.innerHTML = '<tr><td colspan="5" class="small">File loaded. Use "Find key" or "Search value".</td></tr>';
 });
 
-function setEnabled(ok){
-  findBtn.disabled = !ok;
-  scanAllBtn.disabled = !ok;
-  resetBtn.disabled = !ok;
-  downloadBackup.disabled = !ok;
-  saveBtn.disabled = !ok;
-  applyAllBtn.disabled = !ok;
-  findByValueBtn.disabled = !ok;
+function enableUI(on){
+  findFieldBtn.disabled = !on;
+  findValueBtn.disabled = !on;
+  downloadBackup.disabled = !on;
+  resetBtn.disabled = !on;
+  saveBtn.disabled = !on;
+  applyAllBtn.disabled = !on;
 }
 
 // Utilities
@@ -144,29 +143,42 @@ function asciiBytes(str){
   for(let i=0;i<str.length;i++) out[i] = str.charCodeAt(i);
   return out;
 }
-
 function findAllAsciiOccurrences(buf, asciiStr){
   const needle = asciiBytes(asciiStr);
   const hits = [];
   for(let i=0;i+needle.length<=buf.length;i++){
-    let ok = true;
-    for(let j=0;j<needle.length;j++){
-      if(buf[i+j] !== needle[j]) { ok=false; break; }
-    }
+    let ok=true;
+    for(let j=0;j<needle.length;j++){ if(buf[i+j] !== needle[j]){ ok=false; break; } }
     if(ok) hits.push(i);
   }
   return hits;
 }
+function hexSlice(buf, start, len){
+  const end = Math.min(buf.length, start + len);
+  const arr=[];
+  for(let i=start;i<end;i++) arr.push(buf[i].toString(16).padStart(2,'0').toUpperCase());
+  return arr.join(' ');
+}
+function offsetHex(n){ return '0x' + n.toString(16).toUpperCase().padStart(8,'0'); }
 
-// read big-endian float64 at given offset
+// read/write helpers
 function readFloat64BE(buf, offset){
   if(offset<0 || offset+8>buf.length) return null;
   const dv = new DataView(buf.buffer, buf.byteOffset + offset, 8);
   return dv.getFloat64(0, false);
 }
+function readFloat64LE(buf, offset){
+  if(offset<0 || offset+8>buf.length) return null;
+  const dv = new DataView(buf.buffer, buf.byteOffset + offset, 8);
+  return dv.getFloat64(0, true);
+}
 function writeFloat64BE(buf, offset, val){
   const dv = new DataView(buf.buffer, buf.byteOffset + offset, 8);
   dv.setFloat64(0, val, false);
+}
+function writeFloat64LE(buf, offset, val){
+  const dv = new DataView(buf.buffer, buf.byteOffset + offset, 8);
+  dv.setFloat64(0, val, true);
 }
 function readInt32LE(buf, offset){
   if(offset<0 || offset+4>buf.length) return null;
@@ -186,10 +198,8 @@ function writeInt32BE(buf, offset, v){
   const dv = new DataView(buf.buffer, buf.byteOffset + offset, 4);
   dv.setInt32(0, v, false);
 }
-
 function readAsciiNearby(buf, offset, maxLen=32){
-  // return continuous printable ascii starting at offset (stop at 0x00 or non-printable)
-  let out = "";
+  let out='';
   for(let i=offset;i<Math.min(buf.length, offset+maxLen);i++){
     const b = buf[i];
     if(b===0) break;
@@ -199,321 +209,299 @@ function readAsciiNearby(buf, offset, maxLen=32){
   return out;
 }
 
-// find AMF number marker (0x00) within [start, start+maxScan)
-function findAMFNumberMarker(buf, startIndex, maxScan=256){
-  for(let i = startIndex; i < Math.min(buf.length, startIndex + maxScan); i++){
-    if (buf[i] === 0x00) {
-      if (i + 1 + 8 <= buf.length) return i;
+// Find nearest likely ASCII key (scan backwards up to lookBack bytes for printable tokens like m_coins)
+function findNearestKey(buf, pos, lookBack=256){
+  const start = Math.max(0, pos - lookBack);
+  const region = buf.slice(start, pos);
+  // convert to string where printable
+  let s = '';
+  for(let i=0;i<region.length;i++){
+    const b = region[i];
+    s += (b>=0x20 && b<=0x7E) ? String.fromCharCode(b) : '\n';
+  }
+  // split by non-printables and choose the last token with length >=3 and containing [_a-zA-Z0-9]
+  const toks = s.split(/\s+/).filter(t=>t && /[a-zA-Z0-9_]/.test(t) && t.length>=3);
+  return toks.length? toks[toks.length-1] : null;
+}
+
+// search value helpers: produce candidate byte sequences for entered value
+function valueToByteCandidates(input, mode){
+  // returns array of {type,label,bytes}
+  const out = [];
+  if(mode==='hex'){
+    const cleaned = input.replace(/\s+/g,'');
+    if(cleaned.length % 2 !== 0) return out;
+    const arr = new Uint8Array(cleaned.length/2);
+    for(let i=0;i<arr.length;i++) arr[i] = parseInt(cleaned.substr(i*2,2),16);
+    out.push({type:'HEX', label:'HEX pattern', bytes:arr});
+    return out;
+  }
+  // decimal number
+  const num = Number(input);
+  if(Number.isNaN(num)) return out;
+  // Float64 BE & LE
+  {
+    const ab = new ArrayBuffer(8); const dv = new DataView(ab); dv.setFloat64(0, num, false);
+    out.push({type:'Float64 BE', label:'Float64 (big-endian)', bytes: new Uint8Array(ab.slice(0))});
+    const ab2 = new ArrayBuffer(8); const dv2 = new DataView(ab2); dv2.setFloat64(0, num, true);
+    out.push({type:'Float64 LE', label:'Float64 (little-endian)', bytes: new Uint8Array(ab2.slice(0))});
+  }
+  // Int32 LE/BE if integer in range
+  if(Number.isInteger(num) && num >= -2147483648 && num <= 2147483647){
+    const ab = new ArrayBuffer(4); const dv = new DataView(ab); dv.setInt32(0, num, true);
+    out.push({type:'Int32 LE', label:'Int32 (LE)', bytes: new Uint8Array(ab.slice(0))});
+    const ab2 = new ArrayBuffer(4); const dv2 = new DataView(ab2); dv2.setInt32(0, num, false);
+    out.push({type:'Int32 BE', label:'Int32 (BE)', bytes: new Uint8Array(ab2.slice(0))});
+    // also uint32 BE/LE if positive
+    if(num >= 0){
+      const ab3 = new ArrayBuffer(4); const dv3 = new DataView(ab3); dv3.setUint32(0, num, false);
+      out.push({type:'UInt32 BE', label:'UInt32 BE', bytes: new Uint8Array(ab3.slice(0))});
+      const ab4 = new ArrayBuffer(4); const dv4 = new DataView(ab4); dv4.setUint32(0, num, true);
+      out.push({type:'UInt32 LE', label:'UInt32 LE', bytes: new Uint8Array(ab4.slice(0))});
     }
   }
-  return -1;
+  // ASCII decimal string
+  const ascii = new TextEncoder().encode(String(input));
+  out.push({type:'ASCII', label:'ASCII decimal string', bytes: ascii});
+  return out;
 }
 
-function hexSlice(buf, start, length){
-  const end = Math.min(buf.length, start + length);
-  let arr = [];
-  for(let i=start;i<end;i++) arr.push(buf[i].toString(16).padStart(2,'0').toUpperCase());
-  return arr.join(' ');
-}
-function contextHex(buf, hit, before=8, after=24){
-  const s = Math.max(0, hit-before);
-  const len = before + after;
-  return hexSlice(buf, s, len);
-}
-function offsetHex(n){ return '0x' + n.toString(16).toUpperCase().padStart(8,'0'); }
-
-// Detection + UI building
-function detectAtHit(hit, keyLen){
-  const scanStart = hit + keyLen;
-  const res = { hit, scanStart, detections: [] };
-
-  // 1) AMF float64 marker 0x00
-  const marker = findAMFNumberMarker(bytes, scanStart, 256);
-  if(marker !== -1){
-    const valOffset = marker + 1;
-    const v = readFloat64BE(bytes, valOffset);
-    if(v !== null) res.detections.push({type:'AMF Float64', markerOffset: marker, value: v, valueOffset: valOffset});
-  }
-
-  // 2) look for 32-bit int at scanStart or a few bytes after (common patterns)
-  for(let delta=0; delta<12; delta++){
-    const off = scanStart + delta;
-    const vLE = readInt32LE(bytes, off);
-    const vBE = readInt32BE(bytes, off);
-    if(vLE !== null && Math.abs(vLE) <= 2147483647) res.detections.push({type:'Int32 LE', value:vLE, valueOffset:off});
-    if(vBE !== null && Math.abs(vBE) <= 2147483647) res.detections.push({type:'Int32 BE', value:vBE, valueOffset:off});
-  }
-
-  // 3) ASCII number near scanStart
-  const ascii = readAsciiNearby(bytes, scanStart, 64);
-  if(ascii && /^[0-9+\-\.]{1,20}$/.test(ascii)){
-    // parsed as number if possible
-    const asNum = Number(ascii);
-    if(!Number.isNaN(asNum)) res.detections.push({type:'ASCII number string', value:ascii, valueNumeric:asNum, valueOffset:scanStart, strLen: ascii.length});
-  }
-
-  // 4) fallback: show a small hex context for manual editing
-  res.hexContext = contextHex(bytes, hit, 12, 24);
-  return res;
-}
-
-function buildResultsTable(field){
-  const hits = findAllAsciiOccurrences(bytes, field);
-  resultsBody.innerHTML = "";
-  if(hits.length===0){
-    resultsBody.innerHTML = '<tr><td colspan="4" class="small">No occurrences found for <code>' + field + '</code>.</td></tr>';
-    return;
-  }
-  hits.forEach((hit, idx)=>{
-    const info = detectAtHit(hit, field.length);
-    const tr = document.createElement('tr'); tr.className='result-row';
-    const tdOffset = document.createElement('td'); tdOffset.innerHTML = offsetHex(hit);
-    const tdCtx = document.createElement('td'); tdCtx.innerHTML = `<div class="hex">${info.hexContext}</div>`;
-    const tdDetect = document.createElement('td');
-    if(info.detections.length===0) tdDetect.innerHTML = '<div class="small warn">No numeric patterns detected nearby.</div>';
-    else {
-      tdDetect.innerHTML = info.detections.map(d=>{
-        if(d.type==='AMF Float64') return `<div class="small ok">${d.type}: <strong>${d.value}</strong> (at ${offsetHex(d.valueOffset)})</div>`;
-        if(d.type.startsWith('Int32')) return `<div class="small ok">${d.type}: <strong>${d.value}</strong> (at ${offsetHex(d.valueOffset)})</div>`;
-        if(d.type==='ASCII number string') return `<div class="small ok">ASCII number: "<strong>${d.value}</strong>" (numeric ${d.valueNumeric}) at ${offsetHex(d.valueOffset)}</div>`;
-        return `<div class="small">${d.type}</div>`;
-      }).join('');
+// search buffer for a given pattern Uint8Array
+function searchPattern(buf, pattern){
+  const hits = [];
+  if(pattern.length === 0) return hits;
+  for(let i=0;i+pattern.length<=buf.length;i++){
+    let ok=true;
+    for(let j=0;j<pattern.length;j++){
+      if(buf[i+j] !== pattern[j]){ ok=false; break; }
     }
+    if(ok) hits.push(i);
+  }
+  return hits;
+}
 
-    const tdEdit = document.createElement('td');
-    // create controls: input + buttons to write as float64/int32/ascii
-    const input = document.createElement('input'); input.className='inline-input'; input.value = (info.detections[0] && info.detections[0].value !== undefined) ? String(info.detections[0].value) : '';
-    const btnFloat = document.createElement('button'); btnFloat.textContent='Set as Float64 (AMF)'; btnFloat.className='action-btn';
-    const btnIntLE = document.createElement('button'); btnIntLE.textContent='Set Int32 LE'; btnIntLE.className='action-btn';
-    const btnIntBE = document.createElement('button'); btnIntBE.textContent='Set Int32 BE'; btnIntBE.className='action-btn';
-    const btnAscii = document.createElement('button'); btnAscii.textContent='Set ASCII (in-place)'; btnAscii.className='action-btn';
-    const infoDiv = document.createElement('div'); infoDiv.style.marginTop='6px'; infoDiv.className='small';
+// Build results UI row
+function addResultRow(offset, label, patternLabel, patternBytes){
+  const tr = document.createElement('tr');
+  const tdOff = document.createElement('td'); tdOff.textContent = offsetHex(offset);
+  const tdLabel = document.createElement('td'); tdLabel.textContent = label || '(no nearby key)';
+  const tdCtx = document.createElement('td'); tdCtx.innerHTML = `<div class="hex">${hexSlice(bytes, Math.max(0,offset-12), ctxRadius*2)}</div>`;
+  const tdDetect = document.createElement('td'); tdDetect.innerHTML = `<div class="small ok">${patternLabel}</div>`;
+  const tdEdit = document.createElement('td');
 
-    // wire button actions
-    btnFloat.addEventListener('click', ()=>{
-      // if AMF marker exists, write at that exact place; otherwise ask user to confirm offset
-      const d = info.detections.find(x=>x.type==='AMF Float64');
-      if(!d){ if(!confirm('No AMF float marker found nearby. This will write 8 bytes starting at scanStart. Continue?')) return; }
-      const writeOffset = d ? d.valueOffset : info.scanStart + 0; // default
-      const val = Number(input.value);
-      if(Number.isNaN(val)){ alert('Enter a valid number'); return; }
-      writeFloat64BE(bytes, writeOffset, val);
-      infoDiv.textContent = `Wrote Float64 ${val} at ${offsetHex(writeOffset)}.`;
-      updateRowAfterEdit(tr, hit, field);
-    });
+  // Show decoded values for likely encodings at this offset
+  const decDiv = document.createElement('div'); decDiv.className='small';
+  // if pattern length 8 maybe float64
+  const floatBE = readFloat64BE(bytes, offset);
+  const floatLE = readFloat64LE(bytes, offset);
+  const int32LE = readInt32LE(bytes, offset);
+  const int32BE = readInt32BE(bytes, offset);
+  decDiv.innerHTML = `Float64 BE: ${floatBE===null?'n/a':floatBE} <br> Float64 LE: ${floatLE===null?'n/a':floatLE} <br> Int32 LE: ${int32LE===null?'n/a':int32LE}  Int32 BE: ${int32BE===null?'n/a':int32BE}`;
+  tdDetect.appendChild(decDiv);
 
-    btnIntLE.addEventListener('click', ()=>{
-      const val = Number(input.value)|0;
-      // choose offset: prefer first Int32 detection
-      const d = info.detections.find(x=>x.type==='Int32 LE') || {valueOffset: info.scanStart};
-      writeInt32LE(bytes, d.valueOffset, val);
-      infoDiv.textContent = `Wrote Int32 LE ${val} at ${offsetHex(d.valueOffset)}.`;
-      updateRowAfterEdit(tr, hit, field);
-    });
+  // editing UI: input + select encoding
+  const input = document.createElement('input'); input.className='input-inline'; input.placeholder='new value';
+  const select = document.createElement('select'); select.className='input-inline';
+  const opts = [
+    {v:'float64-be', t:'Float64 BE (AMF number)'},
+    {v:'float64-le', t:'Float64 LE'},
+    {v:'int32-le', t:'Int32 LE'},
+    {v:'int32-be', t:'Int32 BE'},
+    {v:'ascii', t:'ASCII (in-place)'}
+  ];
+  opts.forEach(o=>{ const el=document.createElement('option'); el.value=o.v; el.textContent=o.t; select.appendChild(el); });
+  const writeBtn = document.createElement('button'); writeBtn.textContent='Write'; writeBtn.className='secondary';
 
-    btnIntBE.addEventListener('click', ()=>{
-      const val = Number(input.value)|0;
-      const d = info.detections.find(x=>x.type==='Int32 BE') || {valueOffset: info.scanStart};
-      writeInt32BE(bytes, d.valueOffset, val);
-      infoDiv.textContent = `Wrote Int32 BE ${val} at ${offsetHex(d.valueOffset)}.`;
-      updateRowAfterEdit(tr, hit, field);
-    });
-
-    btnAscii.addEventListener('click', ()=>{
-      const s = input.value;
-      // write ASCII in-place: must not exceed readable run length (we will write up to existing printable run or prompt)
-      const runLen = Math.max(1, (info.detections.find(x=>x.type==='ASCII number string')||{}).strLen || 0);
-      if(runLen===0){
-        if(!confirm('No ASCII run detected; this will overwrite bytes starting at scanStart and may corrupt. Continue?')){}
+  writeBtn.addEventListener('click', ()=>{
+    const raw = input.value.trim();
+    if(raw.length===0){ alert('Enter a value to write'); return; }
+    const enc = select.value;
+    if(enc==='ascii'){
+      const encBytes = new TextEncoder().encode(raw);
+      // write in-place; ensure we don't exceed buffer length
+      if(encBytes.length > patternBytes.length){
+        if(!confirm(`ASCII is longer than matched pattern (${encBytes.length} > ${patternBytes.length}). This will overwrite subsequent bytes. Continue?`)) return;
       }
-      const out = new TextEncoder().encode(s);
-      if(out.length <= runLen){
-        // write and pad with 0x00
-        for(let i=0;i<out.length;i++) bytes[info.scanStart + i] = out[i];
-        for(let j=out.length;j<runLen;j++) bytes[info.scanStart + j] = 0;
-        infoDiv.textContent = `Wrote ASCII "${s}" in-place at ${offsetHex(info.scanStart)} (padded to ${runLen} bytes).`;
-      } else {
-        if(!confirm(`You are writing ${out.length} bytes into a ${runLen}-byte slot. This may corrupt AMF. Continue?`)){
-          return;
-        }
-        // write as much as possible (risky)
-        for(let i=0;i<out.length && info.scanStart + i < bytes.length;i++) bytes[info.scanStart + i] = out[i];
-        infoDiv.textContent = `Wrote ASCII "${s}" at ${offsetHex(info.scanStart)} (may have overwritten data).`;
-      }
-      updateRowAfterEdit(tr, hit, field);
-    });
-
-    // append UI elements
-    tdEdit.appendChild(input);
-    tdEdit.appendChild(document.createElement('br'));
-    tdEdit.appendChild(document.createElement('br'));
-    tdEdit.appendChild(btnFloat);
-    tdEdit.appendChild(document.createTextNode(' '));
-    tdEdit.appendChild(btnIntLE);
-    tdEdit.appendChild(document.createTextNode(' '));
-    tdEdit.appendChild(btnIntBE);
-    tdEdit.appendChild(document.createElement('br'));
-    tdEdit.appendChild(document.createElement('br'));
-    tdEdit.appendChild(btnAscii);
-    tdEdit.appendChild(infoDiv);
-
-    tr.appendChild(tdOffset);
-    tr.appendChild(tdCtx);
-    tr.appendChild(tdDetect);
-    tr.appendChild(tdEdit);
-    resultsBody.appendChild(tr);
+      for(let i=0;i<encBytes.length && offset+i<bytes.length;i++) bytes[offset+i]=encBytes[i];
+      // if shorter, zero-pad
+      for(let j=encBytes.length;j<patternBytes.length && offset+j<bytes.length;j++) bytes[offset+j]=0;
+      tdEdit.appendChild(document.createElement('div')).textContent = `Wrote ASCII "${raw}" at ${offsetHex(offset)}`;
+      // refresh row display values
+      refreshRowDecodings(tr, offset);
+      return;
+    }
+    const num = Number(raw);
+    if(Number.isNaN(num)){ alert('Enter a numeric value for that encoding'); return; }
+    if(enc==='float64-be'){ writeFloat64BE(bytes, offset, num); tdEdit.appendChild(document.createElement('div')).textContent = `Wrote Float64 BE ${num}`; }
+    else if(enc==='float64-le'){ writeFloat64LE(bytes, offset, num); tdEdit.appendChild(document.createElement('div')).textContent = `Wrote Float64 LE ${num}`; }
+    else if(enc==='int32-le'){ writeInt32LE(bytes, offset, num|0); tdEdit.appendChild(document.createElement('div')).textContent = `Wrote Int32 LE ${num|0}`; }
+    else if(enc==='int32-be'){ writeInt32BE(bytes, offset, num|0); tdEdit.appendChild(document.createElement('div')).textContent = `Wrote Int32 BE ${num|0}`; }
+    refreshRowDecodings(tr, offset);
   });
+
+  tdEdit.appendChild(input);
+  tdEdit.appendChild(document.createTextNode(' '));
+  tdEdit.appendChild(select);
+  tdEdit.appendChild(document.createTextNode(' '));
+  tdEdit.appendChild(writeBtn);
+
+  tr.appendChild(tdOff); tr.appendChild(tdLabel); tr.appendChild(tdCtx); tr.appendChild(tdDetect); tr.appendChild(tdEdit);
+  resultsBody.appendChild(tr);
 }
 
-// update UI after an edit (re-detect and refresh row's detection cell)
-function updateRowAfterEdit(tr, hit, field){
-  // rebuild single row (simple approach: rebuild whole results list)
-  buildResultsTable(field);
+// refresh displayed decoding info for a row
+function refreshRowDecodings(tr, offset){
+  // replace detect cell (4th)
+  const detectCell = tr.children[3];
+  detectCell.innerHTML = '';
+  const floatBE = readFloat64BE(bytes, offset);
+  const floatLE = readFloat64LE(bytes, offset);
+  const int32LE = readInt32LE(bytes, offset);
+  const int32BE = readInt32BE(bytes, offset);
+  detectCell.innerHTML = `<div class="small ok">Float64 BE: ${floatBE===null?'n/a':floatBE}</div>
+                          <div class="small ok">Float64 LE: ${floatLE===null?'n/a':floatLE}</div>
+                          <div class="small ok">Int32 LE: ${int32LE===null?'n/a':int32LE} &nbsp; Int32 BE: ${int32BE===null?'n/a':int32BE}</div>`;
 }
 
-// Basic find button
-findBtn.addEventListener('click', ()=>{
-  const field = fieldNameInput.value.trim();
-  if(!field){ alert('Enter a field name to search for (case-sensitive).'); return; }
-  buildResultsTable(field);
-});
+// event handlers
 
-// scan for ASCII strings (broad)
-scanAllBtn.addEventListener('click', ()=>{
-  // scan for printable ascii runs longer than 6 characters
-  const results = [];
-  let i=0;
-  while(i < bytes.length){
-    if(bytes[i] >= 0x20 && bytes[i] <= 0x7E){
-      let j=i;
-      while(j < bytes.length && bytes[j] >= 0x20 && bytes[j] <= 0x7E) j++;
-      const len = j - i;
-      if(len >= 6){
-        const s = readAsciiNearby(bytes, i, len);
-        results.push({offset:i, text:s, len});
-      }
-      i = j;
-    } else i++;
-  }
-  if(results.length===0){ resultsBody.innerHTML = '<tr><td colspan="4">No ascii runs found.</td></tr>'; return; }
+// Find by ASCII key name
+findFieldBtn.addEventListener('click', ()=>{
+  const key = fieldNameInput.value.trim();
+  if(!key){ alert('Enter a field name (ASCII) to search'); return; }
+  const hits = findAllAsciiOccurrences(bytes, key);
   resultsBody.innerHTML = '';
-  results.slice(0,200).forEach(r=>{
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${offsetHex(r.offset)}</td><td class="hex">${hexSlice(bytes, Math.max(0,r.offset-8), 40)}</td>
-      <td colspan="2" class="small">ASCII run: "${r.text}" (len ${r.len})</td>`;
-    resultsBody.appendChild(tr);
+  if(hits.length===0){ resultsBody.innerHTML = '<tr><td colspan="5" class="small">No occurrences found.</td></tr>'; return; }
+  hits.forEach(hit=>{
+    // for each hit, attempt to detect AMF number or other encodings nearby
+    // first try find AMF number marker 0x00 within next 256 bytes then read float64 BE
+    const scanStart = hit + key.length;
+    // try AMF 0x00 marker (typical in many .sol)
+    let marker = -1;
+    for(let i=scanStart;i<Math.min(bytes.length, scanStart+256);i++){
+      if(bytes[i] === 0x00 && i+1+8 <= bytes.length){ marker = i; break; }
+    }
+    if(marker !== -1){
+      // value at marker+1 as float64 BE usually
+      addResultRow(marker+1, key, 'AMF Float64 (marker at ' + offsetHex(marker) + ')', new Uint8Array(bytes.slice(marker+1, marker+9)));
+    } else {
+      // fallback: show nearby bytes starting at scanStart (try several likely offsets)
+      addResultRow(scanStart, key, 'Fallback (no AMF marker found)', new Uint8Array(bytes.slice(scanStart, Math.min(bytes.length, scanStart+8))));
+    }
   });
 });
 
-// find by numeric value (interpret input as decimal or hex)
-findByValueBtn.addEventListener('click', ()=>{
+// Find by numeric value (multi-encoding)
+findValueBtn.addEventListener('click', ()=>{
   const q = valueSearchInput.value.trim();
-  if(!q) return;
-  let needleBytes = null;
-  if(/^[0-9]+$/.test(q)){
-    // decimal number: search for its ASCII representation and 32/64-bit binary forms
-    const ascii = new TextEncoder().encode(q);
-    const asInt = Number(q);
-    // prepare some binary forms
-    let candidates = [];
-    // int32 LE/BE
-    const tmp = new ArrayBuffer(4); const dv = new DataView(tmp); dv.setInt32(0, asInt, true); candidates.push(new Uint8Array(tmp.slice(0)));
-    const tmp2 = new ArrayBuffer(4); const dv2 = new DataView(tmp2); dv2.setInt32(0, asInt, false); candidates.push(new Uint8Array(tmp2.slice(0)));
-    // float64
-    const tmp3 = new ArrayBuffer(8); const dv3 = new DataView(tmp3); dv3.setFloat64(0, asInt, false); candidates.push(new Uint8Array(tmp3.slice(0)));
-    // build list of hits
-    const hits = [];
-    // ascii
-    for(let i=0;i+ascii.length<=bytes.length;i++){
-      let ok=true; for(let j=0;j<ascii.length;j++) if(bytes[i+j] !== ascii[j]) {ok=false;break;}
-      if(ok) hits.push({offset:i, type:'ASCII', repr:q});
-    }
-    // binary candidates
-    candidates.forEach((cand,ci)=>{
-      for(let i=0;i+cand.length<=bytes.length;i++){
-        let ok=true; for(let j=0;j<cand.length;j++) if(bytes[i+j] !== cand[j]) {ok=false;break;}
-        if(ok) hits.push({offset:i, type: (cand.length===4? (ci===0?'Int32 LE':'Int32 BE') : 'Float64 BE'), repr: cand.length});
-      }
-    });
-    if(hits.length===0) { alert('No occurrences of that value found.'); return; }
-    resultsBody.innerHTML = '';
-    hits.forEach(h=>{
-      const tr = document.createElement('tr');
-      tr.innerHTML = `<td>${offsetHex(h.offset)}</td><td class="hex">${hexSlice(bytes, Math.max(0,h.offset-8), 40)}</td><td class="small">${h.type}</td>
-        <td><button class="action-btn" onclick="promptReplaceAt(${h.offset})">Edit here</button></td>`;
-      resultsBody.appendChild(tr);
-    });
-  } else if(/^[0-9A-Fa-f\s]+$/.test(q)){
-    // hex pattern - search bytes
+  if(!q){ alert('Enter a value to search'); return; }
+  const mode = valueMode.value; // dec or hex
+  let candidates = [];
+  if(mode === 'hex'){
     const cleaned = q.replace(/\s+/g,'');
     if(cleaned.length % 2 !== 0){ alert('Hex must have even digits'); return; }
-    const needle = new Uint8Array(cleaned.length/2);
-    for(let i=0;i<needle.length;i++) needle[i] = parseInt(cleaned.substr(i*2,2),16);
-    const hits = [];
-    for(let i=0;i+needle.length<=bytes.length;i++){
-      let ok=true; for(let j=0;j<needle.length;j++) if(bytes[i+j] !== needle[j]){ok=false;break;}
-      if(ok) hits.push(i);
-    }
-    if(hits.length===0){ alert('No hex occurrences found'); return; }
-    resultsBody.innerHTML = '';
-    hits.forEach(off=>{
-      const tr = document.createElement('tr');
-      tr.innerHTML = `<td>${offsetHex(off)}</td><td class="hex">${hexSlice(bytes, Math.max(0,off-8), 40)}</td><td class="small">HEX</td>
-        <td><button class="action-btn" onclick="promptReplaceAt(${off})">Edit here</button></td>`;
-      resultsBody.appendChild(tr);
+    const arr = new Uint8Array(cleaned.length/2);
+    for(let i=0;i<arr.length;i++) arr[i] = parseInt(cleaned.substr(i*2,2),16);
+    candidates.push({type:'HEX', label:'HEX pattern', bytes:arr});
+  } else {
+    candidates = valueToByteCandidates(q, 'dec');
+  }
+  // find hits for each candidate and collect unique offsets
+  const found = new Map(); // offset -> {patternLabel, bytes}
+  candidates.forEach(c=>{
+    const hits = searchPattern(bytes, c.bytes);
+    hits.forEach(h=>{
+      if(!found.has(h)) found.set(h, {patternLabel:c.label, bytes:c.bytes});
     });
-  } else alert('Enter a decimal number or hex digits.');
+  });
+  // build results table
+  resultsBody.innerHTML = '';
+  if(found.size === 0){
+    resultsBody.innerHTML = '<tr><td colspan="5" class="small">No occurrences found for that value in common encodings.</td></tr>';
+    return;
+  }
+  // for each offset, find nearest ASCII key label
+  Array.from(found.keys()).sort((a,b)=>a-b).forEach(offset=>{
+    const info = found.get(offset);
+    const key = findNearestKey(bytes, offset) || '';
+    addResultRow(offset, key, info.patternLabel, info.bytes);
+  });
 });
 
-window.promptReplaceAt = function(off){
-  const val = prompt('Enter decimal value to write (will ask which format):');
-  if(val===null) return;
-  const v = Number(val);
-  if(Number.isNaN(v)){ alert('Not a number'); return; }
-  const format = prompt('Type: 1=float64 (AMF), 2=int32LE, 3=int32BE','1');
-  if(format==='1') { writeFloat64BE(bytes, off, v); alert('Wrote float64 at '+offsetHex(off)); }
-  else if(format==='2') { writeInt32LE(bytes, off, v|0); alert('Wrote int32LE at '+offsetHex(off)); }
-  else if(format==='3') { writeInt32BE(bytes, off, v|0); alert('Wrote int32BE at '+offsetHex(off)); }
-  buildResultsTable(fieldNameInput.value.trim());
-}
-
-// Download & Reset
+// Download backup
 downloadBackup.addEventListener('click', ()=>{
   if(!originalBytes) return;
-  downloadBlob(originalBytes, filename + '.backup.sol');
+  const blob = new Blob([originalBytes], {type:'application/octet-stream'});
+  const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download = filename + '.backup.sol'; a.click(); URL.revokeObjectURL(a.href);
 });
 
+// Reset edits
 resetBtn.addEventListener('click', ()=>{
   if(!originalBytes) return;
-  if(!confirm('Reset working copy to original bytes? Unsaved edits will be lost.')) return;
+  if(!confirm('Reset working copy to original?')) return;
   bytes = new Uint8Array(originalBytes);
-  buildResultsTable(fieldNameInput.value.trim());
-  alert('Reset done.');
+  resultsBody.innerHTML = '<tr><td colspan="5" class="small">Reset done. Search again.</td></tr>';
 });
 
+// Save edited file
 saveBtn.addEventListener('click', ()=>{
   if(!bytes) return;
-  downloadBlob(bytes, filename.replace(/(\.sol)?$/i,'-edited.sol'));
+  const blob = new Blob([bytes], {type:'application/octet-stream'});
+  const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download = filename.replace(/(\.sol)?$/i,'-edited.sol'); a.click(); URL.revokeObjectURL(a.href);
 });
 
-function downloadBlob(uint8arr, outName){
-  const blob = new Blob([uint8arr], {type: 'application/octet-stream'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = outName; document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(()=> URL.revokeObjectURL(url), 1000);
-}
-
-// simple helper to show initial message
-function initialMessage(){
-  resultsBody.innerHTML = '<tr><td colspan="4" class="small">Load a .sol then search for a field name (e.g. <code>m_coins</code>).</td></tr>';
-}
-initialMessage();
-
-// Enable find-by-value button when file loaded
-fileInput.addEventListener('change', ()=> {
-  setTimeout(()=>{ findByValueBtn.disabled = false; }, 50);
+// Apply same edit to all results (prompts for encoding & value)
+applyAllBtn.addEventListener('click', ()=>{
+  const rows = resultsBody.querySelectorAll('tr');
+  if(rows.length===0){ alert('No results to apply'); return; }
+  const enc = prompt('Apply as: 1=float64BE 2=float64LE 3=int32LE 4=int32BE 5=ascii (in-place). Enter number:','1');
+  if(!enc) return;
+  const val = prompt('Enter value to write (decimal for numeric, text for ASCII):');
+  if(val===null) return;
+  rows.forEach(r=>{
+    try{
+      const offText = r.children[0].textContent.trim();
+      const off = parseInt(offText.replace('0x',''),16);
+      if(isNaN(off)) return;
+      if(enc==='1'){ writeFloat64BE(bytes, off, Number(val)); }
+      else if(enc==='2'){ writeFloat64LE(bytes, off, Number(val)); }
+      else if(enc==='3'){ writeInt32LE(bytes, off, Number(val)|0); }
+      else if(enc==='4'){ writeInt32BE(bytes, off, Number(val)|0); }
+      else if(enc==='5'){ const b = new TextEncoder().encode(val); for(let i=0;i<b.length;i++) if(off+i < bytes.length) bytes[off+i]=b[i]; }
+    } catch(e){ console.warn('applyAll error', e); }
+  });
+  alert('Applied edits to all shown offsets. Review and save.');
 });
+
+
+// small helpers copied from earlier
+function valueToByteCandidates(input, mode){
+  const out=[];
+  if(mode==='hex'){ const cleaned = input.replace(/\s+/g,''); if(cleaned.length%2!==0) return out; const arr=new Uint8Array(cleaned.length/2); for(let i=0;i<arr.length;i++) arr[i]=parseInt(cleaned.substr(i*2,2),16); out.push({type:'HEX', label:'HEX', bytes:arr}); return out; }
+  const num = Number(input);
+  if(Number.isNaN(num)) return out;
+  // float64 be/le
+  { const ab=new ArrayBuffer(8); new DataView(ab).setFloat64(0,num,false); out.push({type:'Float64BE', label:'Float64 BE', bytes:new Uint8Array(ab.slice(0))}); }
+  { const ab=new ArrayBuffer(8); new DataView(ab).setFloat64(0,num,true); out.push({type:'Float64LE', label:'Float64 LE', bytes:new Uint8Array(ab.slice(0))}); }
+  if(Number.isInteger(num) && num>=-2147483648 && num<=2147483647){
+    { const ab=new ArrayBuffer(4); new DataView(ab).setInt32(0,num,true); out.push({type:'Int32LE',label:'Int32 LE',bytes:new Uint8Array(ab.slice(0))}); }
+    { const ab=new ArrayBuffer(4); new DataView(ab).setInt32(0,num,false); out.push({type:'Int32BE',label:'Int32 BE',bytes:new Uint8Array(ab.slice(0))}); }
+    if(num>=0){ const ab=new ArrayBuffer(4); new DataView(ab).setUint32(0,num,false); out.push({type:'Uint32BE',label:'UInt32 BE',bytes:new Uint8Array(ab.slice(0))}); const ab2=new ArrayBuffer(4); new DataView(ab2).setUint32(0,num,true); out.push({type:'Uint32LE',label:'UInt32 LE',bytes:new Uint8Array(ab2.slice(0))}); }
+  }
+  // ascii decimal
+  out.push({type:'ASCII', label:'ASCII text', bytes:new TextEncoder().encode(String(input))});
+  return out;
+}
+
+function searchPattern(buf, pattern){
+  const hits=[];
+  if(pattern.length===0) return hits;
+  for(let i=0;i+pattern.length<=buf.length;i++){
+    let ok=true; for(let j=0;j<pattern.length;j++){ if(buf[i+j] !== pattern[j]){ ok=false; break; } }
+    if(ok) hits.push(i);
+  }
+  return hits;
+}
 </script>
 </body>
 </html>
