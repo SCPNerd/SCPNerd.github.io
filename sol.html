@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>.sol Hex Editor</title>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<style>
+  body{font-family:system-ui,Segoe UI,Arial,Helvetica,sans-serif;margin:16px;background:#0f1720;color:#e6eef6}
+  h1{font-size:18px;margin:0 0 10px}
+  .row{display:flex;gap:12px;align-items:center;margin-bottom:12px}
+  input[type=file]{color:#ddd}
+  button{background:#2563eb;color:#fff;border:0;padding:8px 10px;border-radius:6px;cursor:pointer}
+  button.secondary{background:#1f2937}
+  textarea{width:100%;min-height:280px;font-family:monospace;padding:12px;border-radius:6px;border:1px solid #263244;background:#071019;color:#cfe8ff; box-sizing:border-box; resize:vertical}
+  .controls{display:flex;gap:8px;flex-wrap:wrap}
+  label{font-size:13px;color:#bcd3ee}
+  .small{font-size:13px;color:#9fb8d9}
+  .note{margin-top:10px;color:#92b6dd;font-size:13px}
+  .flex{display:flex;gap:12px}
+  .col{flex:1}
+  .split{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .searchbar{display:flex;gap:8px}
+</style>
+</head>
+<body>
+  <h1>.sol HEX & Binary editor — open, edit, repackage</h1>
+
+  <div class="row">
+    <input id="fileInput" type="file" accept=".sol,application/octet-stream"/>
+    <button id="downloadBtn" disabled>Download edited .sol</button>
+    <button id="resetBtn" class="secondary" disabled>Reset to original</button>
+  </div>
+
+  <div class="split">
+    <div class="col">
+      <label>Hex + ASCII view (editable hex on the right). Edit hex then press Apply Hex Edits.</label>
+      <textarea id="hexView" spellcheck="false" placeholder="Load a .sol to view hex..." ></textarea>
+      <div class="controls" style="margin-top:8px">
+        <button id="applyHexBtn" disabled>Apply Hex Edits</button>
+        <button id="beautifyHexBtn" disabled>Format hex</button>
+        <button id="downloadRawBtn" disabled class="secondary">Download raw (no changes)</button>
+      </div>
+    </div>
+
+    <div class="col">
+      <label>Quick edit: find & replace (ASCII or hex)</label>
+      <div style="margin-bottom:8px" class="searchbar">
+        <input id="findInput" placeholder="Find (hex like: DE AD BE EF or ASCII text)"/>
+        <input id="replaceInput" placeholder="Replace (must be equal byte length for safe in-place replace)"/>
+      </div>
+      <div class="controls" style="margin-bottom:8px">
+        <button id="replaceBtn" disabled>Find & Replace (in-place)</button>
+        <button id="replaceAllBtn" disabled>Replace All</button>
+      </div>
+
+      <label>Tools</label>
+      <div class="controls" style="margin-bottom:8px">
+        <button id="searchHexBtn" disabled>Find occurrences (hex/ASCII)</button>
+        <button id="exportTxtBtn" disabled>Export found as text</button>
+        <button id="zeroPadBtn" disabled>Zero-pad end (append zeros)</button>
+      </div>
+
+      <div class="note" id="status">Status: waiting for file.</div>
+    </div>
+  </div>
+
+<script>
+/*
+  Simple browser-based hex editor for binary files (.sol included).
+  - Loads file into Uint8Array
+  - Shows hexdump with ASCII column
+  - Allows editing hex text and writing back
+  - Supports find/replace (in-place: replacement length must match)
+  - Exports edited blob for download
+*/
+let originalBytes = null; // Uint8Array original
+let bytes = null;         // working copy
+let filename = "";
+
+const fileInput = document.getElementById('fileInput');
+const hexView = document.getElementById('hexView');
+const downloadBtn = document.getElementById('downloadBtn');
+const resetBtn = document.getElementById('resetBtn');
+const applyHexBtn = document.getElementById('applyHexBtn');
+const beautifyHexBtn = document.getElementById('beautifyHexBtn');
+const downloadRawBtn = document.getElementById('downloadRawBtn');
+const findInput = document.getElementById('findInput');
+const replaceInput = document.getElementById('replaceInput');
+const replaceBtn = document.getElementById('replaceBtn');
+const replaceAllBtn = document.getElementById('replaceAllBtn');
+const searchHexBtn = document.getElementById('searchHexBtn');
+const exportTxtBtn = document.getElementById('exportTxtBtn');
+const zeroPadBtn = document.getElementById('zeroPadBtn');
+const status = document.getElementById('status');
+
+fileInput.addEventListener('change', async (e)=>{
+  const f = e.target.files[0];
+  if(!f) return;
+  filename = f.name;
+  const ab = await f.arrayBuffer();
+  originalBytes = new Uint8Array(ab);
+  bytes = new Uint8Array(originalBytes); // copy
+  renderHexView();
+  setEnabled(true);
+  status.textContent = `Loaded ${filename} (${bytes.length} bytes)`;
+});
+
+function setEnabled(enabled){
+  applyHexBtn.disabled = !enabled;
+  beautifyHexBtn.disabled = !enabled;
+  downloadBtn.disabled = !enabled;
+  resetBtn.disabled = !enabled;
+  downloadRawBtn.disabled = !enabled;
+  replaceBtn.disabled = !enabled;
+  replaceAllBtn.disabled = !enabled;
+  searchHexBtn.disabled = !enabled;
+  exportTxtBtn.disabled = !enabled;
+  zeroPadBtn.disabled = !enabled;
+}
+
+function renderHexView(){
+  // show 16 bytes per line: offset 8 hex bytes ascii
+  const perLine = 16;
+  let lines = [];
+  for(let i=0;i<bytes.length;i+=perLine){
+    const slice = bytes.slice(i,i+perLine);
+    const hexs = Array.from(slice).map(v=>v.toString(16).padStart(2,'0').toUpperCase()).join(' ');
+    let ascii = Array.from(slice).map(v=>{
+      return (v >= 0x20 && v <= 0x7E) ? String.fromCharCode(v) : '.';
+    }).join('');
+    lines.push(i.toString(16).padStart(8,'0').toUpperCase() + '  ' + hexs.padEnd(perLine*3-1,' ') + '  |' + ascii + '|');
+  }
+  hexView.value = lines.join('\n');
+}
+
+function parseHexTextToBytes(text){
+  // Accept the hex view and convert all two-digit hex sequences to bytes
+  // Remove offsets and ASCII columns if user pasted the whole dump - extract hex tokens
+  const hexOnly = text.replace(/[^0-9A-Fa-f]/g,'');
+  if(hexOnly.length % 2 !== 0) throw new Error("Hex length is odd - probably a stray character.");
+  const out = new Uint8Array(hexOnly.length/2);
+  for(let i=0;i<out.length;i++){
+    out[i] = parseInt(hexOnly.substr(i*2,2),16);
+  }
+  return out;
+}
+
+applyHexBtn.addEventListener('click', ()=>{
+  try{
+    const edited = parseHexTextToBytes(hexView.value);
+    bytes = edited;
+    status.textContent = `Applied hex edits (${bytes.length} bytes).`;
+  }catch(err){
+    alert('Failed to parse hex: ' + err.message);
+  }
+});
+
+beautifyHexBtn.addEventListener('click', ()=>{
+  renderHexView();
+});
+
+downloadRawBtn.addEventListener('click', ()=>{
+  downloadBlob(originalBytes, filename.replace(/(\.sol)?$/i,'.sol'));
+});
+
+downloadBtn.addEventListener('click', ()=>{
+  downloadBlob(bytes, filename.replace(/(\.sol)?$/i,'-edited.sol'));
+});
+
+resetBtn.addEventListener('click', ()=>{
+  if(!originalBytes) return;
+  bytes = new Uint8Array(originalBytes);
+  renderHexView();
+  status.textContent = 'Reset to original bytes.';
+});
+
+function downloadBlob(uint8arr, outName){
+  const blob = new Blob([uint8arr], {type: 'application/octet-stream'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = outName;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+// ===== search & replace utilities =====
+function normalizeSearchInput(str){
+  if(!str) return null;
+  const maybeHex = /^[0-9A-Fa-f\s]+$/.test(str);
+  if(maybeHex){
+    const cleaned = str.replace(/\s+/g,'');
+    if(cleaned.length % 2 !== 0) throw new Error("Hex search must have even number of digits");
+    const arr = new Uint8Array(cleaned.length/2);
+    for(let i=0;i<arr.length;i++) arr[i] = parseInt(cleaned.substr(i*2,2),16);
+    return arr;
+  } else {
+    // ASCII text -> UTF-8 bytes
+    return new TextEncoder().encode(str);
+  }
+}
+
+function findAllOccurrences(haystack, needle){
+  const out = [];
+  for(let i=0;i+needle.length<=haystack.length;i++){
+    let match = true;
+    for(let j=0;j<needle.length;j++){
+      if(haystack[i+j] !== needle[j]) { match=false; break; }
+    }
+    if(match) out.push(i);
+  }
+  return out;
+}
+
+replaceBtn.addEventListener('click', ()=>{
+  try{
+    const needle = normalizeSearchInput(findInput.value);
+    const repl  = normalizeSearchInput(replaceInput.value);
+    if(!needle) { alert('Enter find value'); return; }
+    if(!repl) { alert('Enter replace value'); return; }
+    if(needle.length !== repl.length){
+      if(!confirm('Replacement length differs from match length. This may corrupt AMF offsets. Continue?')) return;
+    }
+    const occ = findAllOccurrences(bytes, needle);
+    if(occ.length===0){ alert('No occurrences found'); return; }
+    const i = occ[0];
+    for(let k=0;k<repl.length;k++) bytes[i+k] = repl[k];
+    renderHexView();
+    status.textContent = `Replaced first occurrence at 0x${i.toString(16).toUpperCase()}`;
+  }catch(err){ alert('Error: '+err.message); }
+});
+
+replaceAllBtn.addEventListener('click', ()=>{
+  try{
+    const needle = normalizeSearchInput(findInput.value);
+    const repl  = normalizeSearchInput(replaceInput.value);
+    if(!needle) { alert('Enter find value'); return; }
+    if(!repl) { alert('Enter replace value'); return; }
+    if(needle.length !== repl.length){
+      if(!confirm('Replacement length differs. This will shift bytes - may break the file. Continue?')) return;
+      // If lengths differ, we will create a new buffer with replacements applied (advanced)
+      // For safety, we don't auto-shift; user warned.
+    }
+    const occ = findAllOccurrences(bytes, needle);
+    if(occ.length===0){ alert('No occurrences found'); return; }
+    for(const i of occ){
+      for(let k=0;k<repl.length;k++) bytes[i+k] = repl[k];
+    }
+    renderHexView();
+    status.textContent = `Replaced ${occ.length} occurrences`;
+  }catch(err){ alert('Error: '+err.message); }
+});
+
+searchHexBtn.addEventListener('click', ()=>{
+  try{
+    const needle = normalizeSearchInput(findInput.value);
+    if(!needle) { alert('Enter find value'); return; }
+    const occ = findAllOccurrences(bytes, needle);
+    if(occ.length===0) alert('No occurrences found');
+    else {
+      alert('Found at offsets (hex): ' + occ.map(o=>'0x'+o.toString(16).toUpperCase()).join(', '));
+    }
+  }catch(err){ alert('Error: '+err.message); }
+});
+
+exportTxtBtn.addEventListener('click', ()=>{
+  // quick extract ASCII strings around first match and download as text
+  const needle = normalizeSearchInput(findInput.value);
+  if(!needle){ alert('Enter find value'); return; }
+  const occ = findAllOccurrences(bytes, needle);
+  if(occ.length===0){ alert('No occurrences found'); return; }
+  const i = occ[0];
+  const start = Math.max(0,i-64);
+  const end = Math.min(bytes.length, i+64+needle.length);
+  const slice = bytes.slice(start,end);
+  const ascii = Array.from(slice).map(b=> (b>=0x20 && b<=0x7E) ? String.fromCharCode(b) : '.' ).join('');
+  const blob = new Blob([ascii], {type:'text/plain'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href=url; a.download='extract.txt'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+});
+
+zeroPadBtn.addEventListener('click', ()=>{
+  const n = parseInt(prompt("Append how many zero bytes?","64"),10);
+  if(isNaN(n) || n<=0) return;
+  const nb = new Uint8Array(bytes.length + n);
+  nb.set(bytes,0);
+  // zeros already default
+  bytes = nb;
+  renderHexView();
+  status.textContent = `Appended ${n} zero bytes; new length ${bytes.length}`;
+});
+</script>
+</body>
+</html>
