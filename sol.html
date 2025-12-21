@@ -1,507 +1,348 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8"/>
-<title>.sol Value Finder & Editor (multi-encoding, labeled)</title>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<style>
-  body{font-family:system-ui,Segoe UI,Arial;background:#07121a;color:#e6eef6;margin:0}
-  header{padding:14px 18px;border-bottom:1px solid rgba(255,255,255,0.03)}
-  h1{margin:0;font-size:18px}
-  .wrap{display:flex;gap:14px;padding:16px;flex-wrap:wrap}
-  .panel{background:#0f2530;border-radius:10px;padding:12px;box-sizing:border-box}
-  .left{width:320px}
-  .right{flex:1;min-width:320px}
-  label{display:block;color:#9fb8d9;font-size:13px;margin-bottom:6px}
-  input[type="file"], input[type="text"], select {width:100%;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:#071821;color:#dff2ff}
-  button{background:#56a6ff;color:#002333;border:0;padding:8px 10px;border-radius:8px;cursor:pointer;font-weight:700}
-  button.secondary{background:#2b4857;color:#dfeefc}
-  .small{font-size:13px;color:#a9cbe8}
-  table{width:100%;border-collapse:collapse;margin-top:10px;font-family:monospace}
-  th,td{padding:6px;border-bottom:1px dashed rgba(255,255,255,0.03);font-size:13px;text-align:left}
-  th{color:#9fb8d9}
-  .hex{background:#071821;padding:6px;border-radius:6px;color:#9be3ff;display:inline-block}
-  .tag{background:rgba(255,255,255,0.03);padding:4px 8px;border-radius:999px;color:#a9cbe8;font-size:12px}
-  .ok{color:#9fffcb}
-  .warn{color:#ffd28a}
-  .input-inline{width:120px;padding:6px;border-radius:6px;border:1px solid rgba(255,255,255,0.03);background:#071821;color:#dfeefc}
-  .action{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
-</style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Sol Editor — .sol file editor</title>
+  <style>
+    :root{
+      --bg:#0f1720;
+      --panel:#0b1220;
+      --muted:#9aa7b2;
+      --accent:#7dd3fc;
+      --gutter:#07101a;
+      --editor-bg:#0b1220;
+      --font: "Courier New", ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+    html,body{height:100%;margin:0;font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial; background:linear-gradient(180deg,#071021 0%, #06101a 100%); color:#dbeafe}
+    .wrap{max-width:1100px;margin:24px auto;padding:18px;border-radius:12px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.02)); box-shadow:0 6px 30px rgba(2,6,23,0.6)}
+    header{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+    h1{font-size:18px;margin:0;color:var(--accent)}
+    .controls{margin-left:auto;display:flex;gap:8px}
+    button{background:#0b1520;color:#dbeafe;border:1px solid rgba(125,211,252,0.08); padding:8px 10px;border-radius:8px;cursor:pointer;font-weight:600}
+    button.ghost{background:transparent;border:1px dashed rgba(125,211,252,0.06); color:var(--muted);font-weight:500}
+    button.small{padding:6px 8px;font-size:13px}
+    .meta{margin-top:12px;color:var(--muted);display:flex;gap:12px;flex-wrap:wrap}
+    main{margin-top:16px;display:flex;gap:12px}
+    /* editor container */
+    .editor-wrap{flex:1; height:68vh; display:flex;border-radius:8px;overflow:hidden;border:1px solid rgba(255,255,255,0.03)}
+    .gutter{
+      background:var(--gutter);
+      color:var(--muted);
+      width:56px;padding:10px 6px 10px 10px;
+      box-sizing:border-box;
+      font-family:var(--font);
+      font-size:13px;line-height:20px;
+      overflow:hidden;
+      text-align:right;
+      user-select:none;
+    }
+    .editor{
+      flex:1; background:var(--editor-bg); padding:8px;height:100%;
+    }
+    textarea{
+      width:100%;height:100%;resize:none;border:0;background:transparent;color:#e6f3ff;font-family:var(--font);font-size:13.5px;line-height:20px;padding:12px 12px 12px 12px;box-sizing:border-box;outline:none;
+      white-space:pre; tab-size:2;
+    }
+    .sidebar{width:240px; background:linear-gradient(180deg, rgba(255,255,255,0.01), transparent); border-left:1px solid rgba(255,255,255,0.02);padding:12px;border-radius:0}
+    .drop-hint{border:2px dashed rgba(125,211,252,0.06);padding:8px;border-radius:6px;color:var(--muted);text-align:center;margin-top:10px}
+    label.switch{display:flex;align-items:center;gap:8px;margin-top:10px}
+    input[type="checkbox"]{accent-color:#7dd3fc}
+    .small-muted{font-size:13px;color:var(--muted);margin-top:8px}
+    .search-row{display:flex;gap:8px;margin-top:8px}
+    input[type="text"]{padding:6px;border-radius:6px;border:1px solid rgba(255,255,255,0.03);background:transparent;color:#dbeafe;flex:1}
+    footer{margin-top:12px;color:var(--muted);font-size:13px;display:flex;justify-content:space-between;align-items:center}
+    a.link{color:var(--accent);text-decoration:none}
+    /* responsive */
+    @media (max-width:880px){
+      .sidebar{display:none}
+      .controls{width:100%;margin-left:0;justify-content:flex-end}
+      .editor-wrap{height:60vh}
+    }
+  </style>
 </head>
 <body>
-  <header>
-    <h1>.sol Value Finder & Editor — multi-encoding, labeled</h1>
-    <div class="small" style="margin-top:6px">Upload .sol → search value or field name → inspect labeled matches → edit and download. Always keep a backup.</div>
-  </header>
-
-  <div class="wrap">
-    <div class="panel left">
-      <label>1) Choose .sol file</label>
-      <input id="fileInput" type="file" accept=".sol,application/octet-stream"/>
-      <div style="margin-top:8px" class="small">Loaded file: <span id="fileName">none</span></div>
-      <div style="margin-top:10px">
-        <button id="downloadBackup" class="secondary" disabled>Download backup</button>
-        <button id="resetBtn" class="secondary" disabled>Reset edits</button>
+  <div class="wrap" role="application">
+    <header>
+      <div>
+        <h1>.sol Editor — open • edit • export</h1>
+        <div class="meta" id="fileMeta">No file loaded</div>
       </div>
 
-      <hr style="margin:12px 0;border:none;border-top:1px solid rgba(255,255,255,0.03)">
-
-      <label>2) Find by field name (ASCII key)</label>
-      <input id="fieldName" type="text" placeholder="e.g. m_coins"/>
-      <div style="margin-top:8px"><button id="findFieldBtn" disabled>Find key</button></div>
-
-      <hr style="margin:12px 0;border:none;border-top:1px solid rgba(255,255,255,0.03)">
-
-      <label>3) Find by numeric value</label>
-      <input id="valueSearch" type="text" placeholder="e.g. 190  or hex DEADBEEF"/>
-      <div style="margin-top:8px" class="action">
-        <button id="findValueBtn" disabled>Search value</button>
-        <select id="valueMode" class="input-inline" title="How to interpret typed value">
-          <option value="dec">decimal</option>
-          <option value="hex">hex</option>
-        </select>
+      <div class="controls" aria-hidden="false">
+        <input id="fileInput" type="file" accept=".sol,text/plain" style="display:none" />
+        <button id="openBtn">Open .sol</button>
+        <button id="newBtn" class="ghost small">New</button>
+        <button id="downloadBtn" class="small">Download</button>
+        <button id="copyBtn" class="ghost small">Copy</button>
       </div>
+    </header>
 
-      <div style="margin-top:10px" class="small">Search tries: <span class="tag">Float64 BE/LE</span> <span class="tag">Int32 BE/LE</span> <span class="tag">ASCII</span>. Matches show the nearest ASCII key (if any).</div>
-    </div>
-
-    <div class="panel right">
-      <div style="display:flex;justify-content:space-between;align-items:center">
-        <label style="margin:0">Matches & edit tool</label>
-        <div>
-          <button id="saveBtn" disabled>Download edited .sol</button>
-          <button id="applyAllBtn" class="secondary" disabled>Apply same edit to all</button>
+    <main>
+      <div class="editor-wrap" id="dropZone">
+        <div class="gutter" id="gutter">1</div>
+        <div class="editor">
+          <textarea id="editor" spellcheck="false" placeholder="// Drop a .sol file here or click Open."></textarea>
         </div>
       </div>
 
-      <table id="resultsTable" aria-live="polite">
-        <thead>
-          <tr><th>Offset</th><th>Nearest key / label</th><th>Context (hex)</th><th>Detected</th><th>Edit</th></tr>
-        </thead>
-        <tbody id="resultsBody">
-          <tr><td colspan="5" class="small">No file loaded.</td></tr>
-        </tbody>
-      </table>
+      <aside class="sidebar" aria-label="Tools">
+        <div class="small-muted">Drag & drop a file onto the editor or click Open.</div>
 
-      <div class="small" style="margin-top:10px">If multiple matches show up for the same numeric value (like many `190`s), use the nearest key name and hex context to pick the coin field. If you want, use "Apply same edit to all" after confirming the first edit works in-game.</div>
-    </div>
+        <div class="drop-hint" id="dropHint">Drop file anywhere in the editor</div>
+
+        <label class="switch">
+          <input type="checkbox" id="wrapToggle" />
+          <span>Toggle word wrap</span>
+        </label>
+
+        <div class="search-row">
+          <input type="text" id="findInput" placeholder="Find (press Enter)" />
+          <button id="findNext" class="small">Next</button>
+        </div>
+
+        <div style="margin-top:10px">
+          <button id="replaceBtn" class="ghost small">Replace</button>
+          <button id="clearBtn" class="small ghost">Clear</button>
+        </div>
+
+        <div class="small-muted" style="margin-top:14px">Keyboard shortcuts:</div>
+        <ul class="small-muted">
+          <li>Ctrl/Cmd + S → Download</li>
+          <li>Ctrl/Cmd + F → Focus Find</li>
+          <li>Ctrl/Cmd + A → Select all</li>
+        </ul>
+
+        <div style="margin-top:12px;font-size:13px;color:var(--muted)">
+          Tip: If you want full language aware editing later, open this file in VS Code or an online IDE.
+        </div>
+      </aside>
+    </main>
+
+    <footer>
+      <div class="small-muted">Simple in-browser .sol editor — no server, local only.</div>
+      <div><a class="link" href="#" id="helpLink">How to use</a></div>
+    </footer>
   </div>
 
 <script>
-/* .sol Value Finder & Editor (single-file)
-   - loads a .sol into `bytes` (Uint8Array)
-   - supports searching by ASCII key name AND by numeric value (multiple encodings)
-   - finds nearest ASCII key label for every hit for easier identification
-   - shows decoded values for likely encodings and allows inline editing
-   - writes back into bytes and allows download
-*/
+(function(){
+  const fileInput = document.getElementById('fileInput');
+  const openBtn = document.getElementById('openBtn');
+  const newBtn = document.getElementById('newBtn');
+  const downloadBtn = document.getElementById('downloadBtn');
+  const copyBtn = document.getElementById('copyBtn');
+  const editor = document.getElementById('editor');
+  const gutter = document.getElementById('gutter');
+  const dropZone = document.getElementById('dropZone');
+  const dropHint = document.getElementById('dropHint');
+  const wrapToggle = document.getElementById('wrapToggle');
+  const fileMeta = document.getElementById('fileMeta');
+  const findInput = document.getElementById('findInput');
+  const findNext = document.getElementById('findNext');
+  const replaceBtn = document.getElementById('replaceBtn');
+  const clearBtn = document.getElementById('clearBtn');
+  const helpLink = document.getElementById('helpLink');
 
-// Globals
-let originalBytes = null;
-let bytes = null;
-let filename = '';
-const ctxRadius = 24; // how many bytes of context to show
+  let currentFile = { name: null, lastModified: null, size: 0 };
 
-// DOM
-const fileInput = document.getElementById('fileInput');
-const fileNameSpan = document.getElementById('fileName');
-const downloadBackup = document.getElementById('downloadBackup');
-const resetBtn = document.getElementById('resetBtn');
-const findFieldBtn = document.getElementById('findFieldBtn');
-const findValueBtn = document.getElementById('findValueBtn');
-const saveBtn = document.getElementById('saveBtn');
-const applyAllBtn = document.getElementById('applyAllBtn');
-const fieldNameInput = document.getElementById('fieldName');
-const valueSearchInput = document.getElementById('valueSearch');
-const valueMode = document.getElementById('valueMode');
-const resultsBody = document.getElementById('resultsBody');
-
-fileInput.addEventListener('change', async (e) => {
-  const f = e.target.files[0];
-  if (!f) return;
-  filename = f.name;
-  fileNameSpan.textContent = filename;
-  const ab = await f.arrayBuffer();
-  originalBytes = new Uint8Array(ab);
-  bytes = new Uint8Array(originalBytes); // working copy
-  enableUI(true);
-  resultsBody.innerHTML = '<tr><td colspan="5" class="small">File loaded. Use "Find key" or "Search value".</td></tr>';
-});
-
-function enableUI(on){
-  findFieldBtn.disabled = !on;
-  findValueBtn.disabled = !on;
-  downloadBackup.disabled = !on;
-  resetBtn.disabled = !on;
-  saveBtn.disabled = !on;
-  applyAllBtn.disabled = !on;
-}
-
-// Utilities
-function asciiBytes(str){
-  const out = new Uint8Array(str.length);
-  for(let i=0;i<str.length;i++) out[i] = str.charCodeAt(i);
-  return out;
-}
-function findAllAsciiOccurrences(buf, asciiStr){
-  const needle = asciiBytes(asciiStr);
-  const hits = [];
-  for(let i=0;i+needle.length<=buf.length;i++){
-    let ok=true;
-    for(let j=0;j<needle.length;j++){ if(buf[i+j] !== needle[j]){ ok=false; break; } }
-    if(ok) hits.push(i);
-  }
-  return hits;
-}
-function hexSlice(buf, start, len){
-  const end = Math.min(buf.length, start + len);
-  const arr=[];
-  for(let i=start;i<end;i++) arr.push(buf[i].toString(16).padStart(2,'0').toUpperCase());
-  return arr.join(' ');
-}
-function offsetHex(n){ return '0x' + n.toString(16).toUpperCase().padStart(8,'0'); }
-
-// read/write helpers
-function readFloat64BE(buf, offset){
-  if(offset<0 || offset+8>buf.length) return null;
-  const dv = new DataView(buf.buffer, buf.byteOffset + offset, 8);
-  return dv.getFloat64(0, false);
-}
-function readFloat64LE(buf, offset){
-  if(offset<0 || offset+8>buf.length) return null;
-  const dv = new DataView(buf.buffer, buf.byteOffset + offset, 8);
-  return dv.getFloat64(0, true);
-}
-function writeFloat64BE(buf, offset, val){
-  const dv = new DataView(buf.buffer, buf.byteOffset + offset, 8);
-  dv.setFloat64(0, val, false);
-}
-function writeFloat64LE(buf, offset, val){
-  const dv = new DataView(buf.buffer, buf.byteOffset + offset, 8);
-  dv.setFloat64(0, val, true);
-}
-function readInt32LE(buf, offset){
-  if(offset<0 || offset+4>buf.length) return null;
-  const dv = new DataView(buf.buffer, buf.byteOffset + offset, 4);
-  return dv.getInt32(0, true);
-}
-function readInt32BE(buf, offset){
-  if(offset<0 || offset+4>buf.length) return null;
-  const dv = new DataView(buf.buffer, buf.byteOffset + offset, 4);
-  return dv.getInt32(0, false);
-}
-function writeInt32LE(buf, offset, v){
-  const dv = new DataView(buf.buffer, buf.byteOffset + offset, 4);
-  dv.setInt32(0, v, true);
-}
-function writeInt32BE(buf, offset, v){
-  const dv = new DataView(buf.buffer, buf.byteOffset + offset, 4);
-  dv.setInt32(0, v, false);
-}
-function readAsciiNearby(buf, offset, maxLen=32){
-  let out='';
-  for(let i=offset;i<Math.min(buf.length, offset+maxLen);i++){
-    const b = buf[i];
-    if(b===0) break;
-    if(b>=0x20 && b<=0x7E) out += String.fromCharCode(b);
-    else break;
-  }
-  return out;
-}
-
-// Find nearest likely ASCII key (scan backwards up to lookBack bytes for printable tokens like m_coins)
-function findNearestKey(buf, pos, lookBack=256){
-  const start = Math.max(0, pos - lookBack);
-  const region = buf.slice(start, pos);
-  // convert to string where printable
-  let s = '';
-  for(let i=0;i<region.length;i++){
-    const b = region[i];
-    s += (b>=0x20 && b<=0x7E) ? String.fromCharCode(b) : '\n';
-  }
-  // split by non-printables and choose the last token with length >=3 and containing [_a-zA-Z0-9]
-  const toks = s.split(/\s+/).filter(t=>t && /[a-zA-Z0-9_]/.test(t) && t.length>=3);
-  return toks.length? toks[toks.length-1] : null;
-}
-
-// search value helpers: produce candidate byte sequences for entered value
-function valueToByteCandidates(input, mode){
-  // returns array of {type,label,bytes}
-  const out = [];
-  if(mode==='hex'){
-    const cleaned = input.replace(/\s+/g,'');
-    if(cleaned.length % 2 !== 0) return out;
-    const arr = new Uint8Array(cleaned.length/2);
-    for(let i=0;i<arr.length;i++) arr[i] = parseInt(cleaned.substr(i*2,2),16);
-    out.push({type:'HEX', label:'HEX pattern', bytes:arr});
-    return out;
-  }
-  // decimal number
-  const num = Number(input);
-  if(Number.isNaN(num)) return out;
-  // Float64 BE & LE
-  {
-    const ab = new ArrayBuffer(8); const dv = new DataView(ab); dv.setFloat64(0, num, false);
-    out.push({type:'Float64 BE', label:'Float64 (big-endian)', bytes: new Uint8Array(ab.slice(0))});
-    const ab2 = new ArrayBuffer(8); const dv2 = new DataView(ab2); dv2.setFloat64(0, num, true);
-    out.push({type:'Float64 LE', label:'Float64 (little-endian)', bytes: new Uint8Array(ab2.slice(0))});
-  }
-  // Int32 LE/BE if integer in range
-  if(Number.isInteger(num) && num >= -2147483648 && num <= 2147483647){
-    const ab = new ArrayBuffer(4); const dv = new DataView(ab); dv.setInt32(0, num, true);
-    out.push({type:'Int32 LE', label:'Int32 (LE)', bytes: new Uint8Array(ab.slice(0))});
-    const ab2 = new ArrayBuffer(4); const dv2 = new DataView(ab2); dv2.setInt32(0, num, false);
-    out.push({type:'Int32 BE', label:'Int32 (BE)', bytes: new Uint8Array(ab2.slice(0))});
-    // also uint32 BE/LE if positive
-    if(num >= 0){
-      const ab3 = new ArrayBuffer(4); const dv3 = new DataView(ab3); dv3.setUint32(0, num, false);
-      out.push({type:'UInt32 BE', label:'UInt32 BE', bytes: new Uint8Array(ab3.slice(0))});
-      const ab4 = new ArrayBuffer(4); const dv4 = new DataView(ab4); dv4.setUint32(0, num, true);
-      out.push({type:'UInt32 LE', label:'UInt32 LE', bytes: new Uint8Array(ab4.slice(0))});
+  // helper: update gutter line numbers
+  function updateGutter(){
+    const lines = (editor.value.match(/\n/g) || []).length + 1;
+    let nums = '';
+    for(let i=1;i<=lines;i++){
+      nums += i + '\n';
     }
+    gutter.textContent = nums.trim();
   }
-  // ASCII decimal string
-  const ascii = new TextEncoder().encode(String(input));
-  out.push({type:'ASCII', label:'ASCII decimal string', bytes: ascii});
-  return out;
-}
 
-// search buffer for a given pattern Uint8Array
-function searchPattern(buf, pattern){
-  const hits = [];
-  if(pattern.length === 0) return hits;
-  for(let i=0;i+pattern.length<=buf.length;i++){
-    let ok=true;
-    for(let j=0;j<pattern.length;j++){
-      if(buf[i+j] !== pattern[j]){ ok=false; break; }
-    }
-    if(ok) hits.push(i);
+  // sync scroll
+  editor.addEventListener('scroll', () => {
+    gutter.scrollTop = editor.scrollTop;
+  });
+
+  editor.addEventListener('input', () => {
+    updateGutter();
+  });
+
+  // initial gutter
+  updateGutter();
+
+  // open button
+  openBtn.addEventListener('click', ()=> fileInput.click());
+  fileInput.addEventListener('change', (e)=>{
+    const f = e.target.files[0];
+    if(f) readFile(f);
+    fileInput.value = ''; // reset
+  });
+
+  // drag/drop
+  ['dragenter','dragover'].forEach(ev => {
+    dropZone.addEventListener(ev, (e)=>{ e.preventDefault(); dropHint.style.borderColor = 'rgba(125,211,252,0.25)'; });
+  });
+  ['dragleave','drop'].forEach(ev => {
+    dropZone.addEventListener(ev, (e)=>{ e.preventDefault(); dropHint.style.borderColor = ''; });
+  });
+  dropZone.addEventListener('drop', (e)=>{
+    const f = e.dataTransfer.files && e.dataTransfer.files[0];
+    if(f) readFile(f);
+  });
+
+  // read file
+  function readFile(file){
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const text = ev.target.result;
+      editor.value = String(text);
+      currentFile.name = file.name;
+      currentFile.size = file.size;
+      currentFile.lastModified = file.lastModified;
+      updateFileMeta();
+      updateGutter();
+      editor.focus();
+    };
+    // only read as text
+    reader.onerror = (err) => alert('Failed to read file: ' + err);
+    reader.readAsText(file);
   }
-  return hits;
-}
 
-// Build results UI row
-function addResultRow(offset, label, patternLabel, patternBytes){
-  const tr = document.createElement('tr');
-  const tdOff = document.createElement('td'); tdOff.textContent = offsetHex(offset);
-  const tdLabel = document.createElement('td'); tdLabel.textContent = label || '(no nearby key)';
-  const tdCtx = document.createElement('td'); tdCtx.innerHTML = `<div class="hex">${hexSlice(bytes, Math.max(0,offset-12), ctxRadius*2)}</div>`;
-  const tdDetect = document.createElement('td'); tdDetect.innerHTML = `<div class="small ok">${patternLabel}</div>`;
-  const tdEdit = document.createElement('td');
-
-  // Show decoded values for likely encodings at this offset
-  const decDiv = document.createElement('div'); decDiv.className='small';
-  // if pattern length 8 maybe float64
-  const floatBE = readFloat64BE(bytes, offset);
-  const floatLE = readFloat64LE(bytes, offset);
-  const int32LE = readInt32LE(bytes, offset);
-  const int32BE = readInt32BE(bytes, offset);
-  decDiv.innerHTML = `Float64 BE: ${floatBE===null?'n/a':floatBE} <br> Float64 LE: ${floatLE===null?'n/a':floatLE} <br> Int32 LE: ${int32LE===null?'n/a':int32LE}  Int32 BE: ${int32BE===null?'n/a':int32BE}`;
-  tdDetect.appendChild(decDiv);
-
-  // editing UI: input + select encoding
-  const input = document.createElement('input'); input.className='input-inline'; input.placeholder='new value';
-  const select = document.createElement('select'); select.className='input-inline';
-  const opts = [
-    {v:'float64-be', t:'Float64 BE (AMF number)'},
-    {v:'float64-le', t:'Float64 LE'},
-    {v:'int32-le', t:'Int32 LE'},
-    {v:'int32-be', t:'Int32 BE'},
-    {v:'ascii', t:'ASCII (in-place)'}
-  ];
-  opts.forEach(o=>{ const el=document.createElement('option'); el.value=o.v; el.textContent=o.t; select.appendChild(el); });
-  const writeBtn = document.createElement('button'); writeBtn.textContent='Write'; writeBtn.className='secondary';
-
-  writeBtn.addEventListener('click', ()=>{
-    const raw = input.value.trim();
-    if(raw.length===0){ alert('Enter a value to write'); return; }
-    const enc = select.value;
-    if(enc==='ascii'){
-      const encBytes = new TextEncoder().encode(raw);
-      // write in-place; ensure we don't exceed buffer length
-      if(encBytes.length > patternBytes.length){
-        if(!confirm(`ASCII is longer than matched pattern (${encBytes.length} > ${patternBytes.length}). This will overwrite subsequent bytes. Continue?`)) return;
-      }
-      for(let i=0;i<encBytes.length && offset+i<bytes.length;i++) bytes[offset+i]=encBytes[i];
-      // if shorter, zero-pad
-      for(let j=encBytes.length;j<patternBytes.length && offset+j<bytes.length;j++) bytes[offset+j]=0;
-      tdEdit.appendChild(document.createElement('div')).textContent = `Wrote ASCII "${raw}" at ${offsetHex(offset)}`;
-      // refresh row display values
-      refreshRowDecodings(tr, offset);
+  function updateFileMeta(){
+    if(!currentFile.name){
+      fileMeta.textContent = 'No file loaded';
       return;
     }
-    const num = Number(raw);
-    if(Number.isNaN(num)){ alert('Enter a numeric value for that encoding'); return; }
-    if(enc==='float64-be'){ writeFloat64BE(bytes, offset, num); tdEdit.appendChild(document.createElement('div')).textContent = `Wrote Float64 BE ${num}`; }
-    else if(enc==='float64-le'){ writeFloat64LE(bytes, offset, num); tdEdit.appendChild(document.createElement('div')).textContent = `Wrote Float64 LE ${num}`; }
-    else if(enc==='int32-le'){ writeInt32LE(bytes, offset, num|0); tdEdit.appendChild(document.createElement('div')).textContent = `Wrote Int32 LE ${num|0}`; }
-    else if(enc==='int32-be'){ writeInt32BE(bytes, offset, num|0); tdEdit.appendChild(document.createElement('div')).textContent = `Wrote Int32 BE ${num|0}`; }
-    refreshRowDecodings(tr, offset);
-  });
-
-  tdEdit.appendChild(input);
-  tdEdit.appendChild(document.createTextNode(' '));
-  tdEdit.appendChild(select);
-  tdEdit.appendChild(document.createTextNode(' '));
-  tdEdit.appendChild(writeBtn);
-
-  tr.appendChild(tdOff); tr.appendChild(tdLabel); tr.appendChild(tdCtx); tr.appendChild(tdDetect); tr.appendChild(tdEdit);
-  resultsBody.appendChild(tr);
-}
-
-// refresh displayed decoding info for a row
-function refreshRowDecodings(tr, offset){
-  // replace detect cell (4th)
-  const detectCell = tr.children[3];
-  detectCell.innerHTML = '';
-  const floatBE = readFloat64BE(bytes, offset);
-  const floatLE = readFloat64LE(bytes, offset);
-  const int32LE = readInt32LE(bytes, offset);
-  const int32BE = readInt32BE(bytes, offset);
-  detectCell.innerHTML = `<div class="small ok">Float64 BE: ${floatBE===null?'n/a':floatBE}</div>
-                          <div class="small ok">Float64 LE: ${floatLE===null?'n/a':floatLE}</div>
-                          <div class="small ok">Int32 LE: ${int32LE===null?'n/a':int32LE} &nbsp; Int32 BE: ${int32BE===null?'n/a':int32BE}</div>`;
-}
-
-// event handlers
-
-// Find by ASCII key name
-findFieldBtn.addEventListener('click', ()=>{
-  const key = fieldNameInput.value.trim();
-  if(!key){ alert('Enter a field name (ASCII) to search'); return; }
-  const hits = findAllAsciiOccurrences(bytes, key);
-  resultsBody.innerHTML = '';
-  if(hits.length===0){ resultsBody.innerHTML = '<tr><td colspan="5" class="small">No occurrences found.</td></tr>'; return; }
-  hits.forEach(hit=>{
-    // for each hit, attempt to detect AMF number or other encodings nearby
-    // first try find AMF number marker 0x00 within next 256 bytes then read float64 BE
-    const scanStart = hit + key.length;
-    // try AMF 0x00 marker (typical in many .sol)
-    let marker = -1;
-    for(let i=scanStart;i<Math.min(bytes.length, scanStart+256);i++){
-      if(bytes[i] === 0x00 && i+1+8 <= bytes.length){ marker = i; break; }
-    }
-    if(marker !== -1){
-      // value at marker+1 as float64 BE usually
-      addResultRow(marker+1, key, 'AMF Float64 (marker at ' + offsetHex(marker) + ')', new Uint8Array(bytes.slice(marker+1, marker+9)));
-    } else {
-      // fallback: show nearby bytes starting at scanStart (try several likely offsets)
-      addResultRow(scanStart, key, 'Fallback (no AMF marker found)', new Uint8Array(bytes.slice(scanStart, Math.min(bytes.length, scanStart+8))));
-    }
-  });
-});
-
-// Find by numeric value (multi-encoding)
-findValueBtn.addEventListener('click', ()=>{
-  const q = valueSearchInput.value.trim();
-  if(!q){ alert('Enter a value to search'); return; }
-  const mode = valueMode.value; // dec or hex
-  let candidates = [];
-  if(mode === 'hex'){
-    const cleaned = q.replace(/\s+/g,'');
-    if(cleaned.length % 2 !== 0){ alert('Hex must have even digits'); return; }
-    const arr = new Uint8Array(cleaned.length/2);
-    for(let i=0;i<arr.length;i++) arr[i] = parseInt(cleaned.substr(i*2,2),16);
-    candidates.push({type:'HEX', label:'HEX pattern', bytes:arr});
-  } else {
-    candidates = valueToByteCandidates(q, 'dec');
+    const date = currentFile.lastModified ? new Date(currentFile.lastModified).toLocaleString() : 'n/a';
+    fileMeta.innerHTML = `<strong>${escapeHtml(currentFile.name)}</strong> — ${Math.round(currentFile.size/1024)} KB — last modified ${date}`;
   }
-  // find hits for each candidate and collect unique offsets
-  const found = new Map(); // offset -> {patternLabel, bytes}
-  candidates.forEach(c=>{
-    const hits = searchPattern(bytes, c.bytes);
-    hits.forEach(h=>{
-      if(!found.has(h)) found.set(h, {patternLabel:c.label, bytes:c.bytes});
-    });
-  });
-  // build results table
-  resultsBody.innerHTML = '';
-  if(found.size === 0){
-    resultsBody.innerHTML = '<tr><td colspan="5" class="small">No occurrences found for that value in common encodings.</td></tr>';
-    return;
+
+  // download/export
+  function downloadCurrent(){
+    let filename = currentFile.name || 'untitled.sol';
+    if(!filename.toLowerCase().endsWith('.sol')) filename = filename + '.sol';
+    const blob = new Blob([editor.value], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
   }
-  // for each offset, find nearest ASCII key label
-  Array.from(found.keys()).sort((a,b)=>a-b).forEach(offset=>{
-    const info = found.get(offset);
-    const key = findNearestKey(bytes, offset) || '';
-    addResultRow(offset, key, info.patternLabel, info.bytes);
+
+  downloadBtn.addEventListener('click', downloadCurrent);
+
+  // new file
+  newBtn.addEventListener('click', ()=> {
+    if(editor.value && !confirm('Clear current editor? Unsaved changes will be lost.')) return;
+    editor.value = '';
+    currentFile = { name: null, lastModified: null, size:0 };
+    updateFileMeta();
+    updateGutter();
+    editor.focus();
   });
-});
 
-// Download backup
-downloadBackup.addEventListener('click', ()=>{
-  if(!originalBytes) return;
-  const blob = new Blob([originalBytes], {type:'application/octet-stream'});
-  const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download = filename + '.backup.sol'; a.click(); URL.revokeObjectURL(a.href);
-});
-
-// Reset edits
-resetBtn.addEventListener('click', ()=>{
-  if(!originalBytes) return;
-  if(!confirm('Reset working copy to original?')) return;
-  bytes = new Uint8Array(originalBytes);
-  resultsBody.innerHTML = '<tr><td colspan="5" class="small">Reset done. Search again.</td></tr>';
-});
-
-// Save edited file
-saveBtn.addEventListener('click', ()=>{
-  if(!bytes) return;
-  const blob = new Blob([bytes], {type:'application/octet-stream'});
-  const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download = filename.replace(/(\.sol)?$/i,'-edited.sol'); a.click(); URL.revokeObjectURL(a.href);
-});
-
-// Apply same edit to all results (prompts for encoding & value)
-applyAllBtn.addEventListener('click', ()=>{
-  const rows = resultsBody.querySelectorAll('tr');
-  if(rows.length===0){ alert('No results to apply'); return; }
-  const enc = prompt('Apply as: 1=float64BE 2=float64LE 3=int32LE 4=int32BE 5=ascii (in-place). Enter number:','1');
-  if(!enc) return;
-  const val = prompt('Enter value to write (decimal for numeric, text for ASCII):');
-  if(val===null) return;
-  rows.forEach(r=>{
+  // copy to clipboard
+  copyBtn.addEventListener('click', async ()=>{
     try{
-      const offText = r.children[0].textContent.trim();
-      const off = parseInt(offText.replace('0x',''),16);
-      if(isNaN(off)) return;
-      if(enc==='1'){ writeFloat64BE(bytes, off, Number(val)); }
-      else if(enc==='2'){ writeFloat64LE(bytes, off, Number(val)); }
-      else if(enc==='3'){ writeInt32LE(bytes, off, Number(val)|0); }
-      else if(enc==='4'){ writeInt32BE(bytes, off, Number(val)|0); }
-      else if(enc==='5'){ const b = new TextEncoder().encode(val); for(let i=0;i<b.length;i++) if(off+i < bytes.length) bytes[off+i]=b[i]; }
-    } catch(e){ console.warn('applyAll error', e); }
+      await navigator.clipboard.writeText(editor.value);
+      copyBtn.textContent = 'Copied';
+      setTimeout(()=> copyBtn.textContent = 'Copy', 1200);
+    }catch(e){
+      alert('Copy failed: ' + e);
+    }
   });
-  alert('Applied edits to all shown offsets. Review and save.');
-});
 
-
-// small helpers copied from earlier
-function valueToByteCandidates(input, mode){
-  const out=[];
-  if(mode==='hex'){ const cleaned = input.replace(/\s+/g,''); if(cleaned.length%2!==0) return out; const arr=new Uint8Array(cleaned.length/2); for(let i=0;i<arr.length;i++) arr[i]=parseInt(cleaned.substr(i*2,2),16); out.push({type:'HEX', label:'HEX', bytes:arr}); return out; }
-  const num = Number(input);
-  if(Number.isNaN(num)) return out;
-  // float64 be/le
-  { const ab=new ArrayBuffer(8); new DataView(ab).setFloat64(0,num,false); out.push({type:'Float64BE', label:'Float64 BE', bytes:new Uint8Array(ab.slice(0))}); }
-  { const ab=new ArrayBuffer(8); new DataView(ab).setFloat64(0,num,true); out.push({type:'Float64LE', label:'Float64 LE', bytes:new Uint8Array(ab.slice(0))}); }
-  if(Number.isInteger(num) && num>=-2147483648 && num<=2147483647){
-    { const ab=new ArrayBuffer(4); new DataView(ab).setInt32(0,num,true); out.push({type:'Int32LE',label:'Int32 LE',bytes:new Uint8Array(ab.slice(0))}); }
-    { const ab=new ArrayBuffer(4); new DataView(ab).setInt32(0,num,false); out.push({type:'Int32BE',label:'Int32 BE',bytes:new Uint8Array(ab.slice(0))}); }
-    if(num>=0){ const ab=new ArrayBuffer(4); new DataView(ab).setUint32(0,num,false); out.push({type:'Uint32BE',label:'UInt32 BE',bytes:new Uint8Array(ab.slice(0))}); const ab2=new ArrayBuffer(4); new DataView(ab2).setUint32(0,num,true); out.push({type:'Uint32LE',label:'UInt32 LE',bytes:new Uint8Array(ab2.slice(0))}); }
+  // find simple
+  function findNextMatch(){
+    const q = findInput.value;
+    if(!q) return;
+    const start = editor.selectionEnd || 0;
+    const idx = editor.value.indexOf(q, start);
+    if(idx === -1){
+      // wrap
+      const idx2 = editor.value.indexOf(q, 0);
+      if(idx2 === -1){ alert('Not found'); return; }
+      selectRange(idx2, idx2 + q.length);
+    }else{
+      selectRange(idx, idx + q.length);
+    }
+    editor.focus();
   }
-  // ascii decimal
-  out.push({type:'ASCII', label:'ASCII text', bytes:new TextEncoder().encode(String(input))});
-  return out;
-}
-
-function searchPattern(buf, pattern){
-  const hits=[];
-  if(pattern.length===0) return hits;
-  for(let i=0;i+pattern.length<=buf.length;i++){
-    let ok=true; for(let j=0;j<pattern.length;j++){ if(buf[i+j] !== pattern[j]){ ok=false; break; } }
-    if(ok) hits.push(i);
+  function selectRange(s,e){
+    editor.setSelectionRange(s,e);
+    // scroll into view
+    const lineHeight = parseFloat(getComputedStyle(editor).lineHeight) || 20;
+    const approxTop = (editor.value.slice(0,s).split('\n').length - 1) * lineHeight;
+    editor.scrollTop = approxTop - 40;
   }
-  return hits;
-}
+  findNext.addEventListener('click', findNextMatch);
+  findInput.addEventListener('keydown', (ev) => {
+    if(ev.key === 'Enter'){ ev.preventDefault(); findNextMatch(); }
+  });
+
+  // replace (simple)
+  replaceBtn.addEventListener('click', ()=>{
+    const q = findInput.value;
+    const replacement = prompt('Replace with:', '');
+    if(q === null || q === '') return alert('Enter a search term first.');
+    if(replacement === null) return;
+    editor.value = editor.value.split(q).join(replacement);
+    updateGutter();
+  });
+
+  clearBtn.addEventListener('click', ()=>{
+    if(!confirm('Clear editor content?')) return;
+    editor.value = '';
+    updateGutter();
+  });
+
+  // wrap toggle
+  wrapToggle.addEventListener('change', (e)=>{
+    editor.style.whiteSpace = e.target.checked ? 'pre-wrap' : 'pre';
+  });
+
+  // keyboard shortcuts
+  window.addEventListener('keydown', (e) => {
+    const cmd = e.ctrlKey || e.metaKey;
+    if(cmd && e.key.toLowerCase() === 's'){
+      e.preventDefault();
+      downloadCurrent();
+    } else if(cmd && e.key.toLowerCase() === 'f'){
+      e.preventDefault();
+      findInput.focus();
+    }
+  });
+
+  // basic helper: escape HTML for display in meta
+  function escapeHtml(s){ return String(s).replace(/[&<>"']/g, function(m){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]); }); }
+
+  // small help popup
+  helpLink.addEventListener('click', (e)=>{
+    e.preventDefault();
+    alert(
+`How to use:
+• Open: click Open .sol or drag + drop a .sol file into the editor.
+• Edit: edit in the middle pane (works like a basic text editor).
+• Download: click Download or press Ctrl/Cmd+S to save the file (original filename preserved where possible).
+• Find/Replace: use the find box; Replace replaces all occurrences.
+
+Notes:
+• This editor runs fully in your browser. Files never leave your machine.
+• For full Solidity language features (autocomplete, compilation), open the file in an IDE like VS Code with the Solidity extension.`
+    );
+  });
+
+  // init: hint text for drag/drop
+  dropZone.addEventListener('dragenter', ()=> dropHint.style.opacity = 1);
+  dropZone.addEventListener('dragleave', ()=> dropHint.style.opacity = 1);
+
+  // ensure gutter updates on paste and other actions
+  ['paste','cut','keydown','keyup'].forEach(evt => editor.addEventListener(evt, () => setTimeout(updateGutter, 1)));
+
+  // accessibility: if user loads a file by right-click > open with browser, we can pre-populate by asking to drop
+  // nothing else
+
+})();
 </script>
 </body>
 </html>
