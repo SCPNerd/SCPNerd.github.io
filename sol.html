@@ -2,295 +2,574 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"/>
-<title>.sol Hex Editor</title>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>.sol Unified Editor — Text + Hex (binary .sol) </title>
 <style>
-  body{font-family:system-ui,Segoe UI,Arial,Helvetica,sans-serif;margin:16px;background:#0f1720;color:#e6eef6}
-  h1{font-size:18px;margin:0 0 10px}
-  .row{display:flex;gap:12px;align-items:center;margin-bottom:12px}
-  input[type=file]{color:#ddd}
-  button{background:#2563eb;color:#fff;border:0;padding:8px 10px;border-radius:6px;cursor:pointer}
-  button.secondary{background:#1f2937}
-  textarea{width:100%;min-height:280px;font-family:monospace;padding:12px;border-radius:6px;border:1px solid #263244;background:#071019;color:#cfe8ff; box-sizing:border-box; resize:vertical}
-  .controls{display:flex;gap:8px;flex-wrap:wrap}
-  label{font-size:13px;color:#bcd3ee}
-  .small{font-size:13px;color:#9fb8d9}
-  .note{margin-top:10px;color:#92b6dd;font-size:13px}
-  .flex{display:flex;gap:12px}
-  .col{flex:1}
-  .split{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-  .searchbar{display:flex;gap:8px}
+  :root{--bg:#0f1720;--panel:#071019;--muted:#9fb8d9;--accent:#7dd3fc}
+  html,body{height:100%;margin:0;background:linear-gradient(180deg,#071017 0,#06101a 100%);color:#dbeafe;font-family:system-ui,Segoe UI,Roboto,Arial}
+  .wrap{max-width:1100px;margin:20px auto;padding:18px;border-radius:12px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.02)); box-shadow:0 8px 40px rgba(2,6,23,0.6)}
+  header{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  h1{margin:0;font-size:18px;color:var(--accent)}
+  .controls{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
+  button{background:#0b1520;color:#dbeafe;border:1px solid rgba(125,211,252,0.06); padding:8px 10px;border-radius:8px;cursor:pointer;font-weight:600}
+  button.ghost{background:transparent;border:1px dashed rgba(125,211,252,0.06); color:var(--muted);font-weight:500}
+  .row{display:flex;gap:12px;align-items:center;margin-top:12px}
+  main{display:flex;gap:12px;margin-top:16px}
+  .editor-area{flex:1;display:flex;flex-direction:column;gap:12px}
+  .tabs{display:flex;gap:8px}
+  .tab{padding:8px 10px;border-radius:8px;cursor:pointer;background:transparent;border:1px solid rgba(255,255,255,0.02);color:var(--muted)}
+  .tab.active{background:linear-gradient(180deg, rgba(125,211,252,0.06), rgba(125,211,252,0.02));color:#07101a;border-color:rgba(125,211,252,0.14)}
+  .editor-wrap{display:flex;border-radius:8px;overflow:hidden;border:1px solid rgba(255,255,255,0.03);height:66vh}
+  /* text editor gutter */
+  .gutter{background:#05101a;color:var(--muted);width:56px;padding:10px 6px 10px 10px;font-family:Courier,monospace;font-size:13px;line-height:20px;text-align:right;user-select:none;overflow:hidden}
+  .text-editor{flex:1;background:var(--panel);padding:0}
+  textarea.text{width:100%;height:100%;resize:none;border:0;background:transparent;color:#e6f3ff;font-family:monospace;font-size:13.5px;line-height:20px;padding:12px;box-sizing:border-box;outline:none;white-space:pre;tab-size:2}
+  /* hex editor */
+  .hex-editor{flex:1;background:var(--panel);padding:12px;box-sizing:border-box;overflow:auto}
+  textarea.hex{width:100%;min-height:100%;height:100%;resize:none;border-radius:6px;border:1px solid #263244;background:#071019;color:#cfe8ff;font-family:monospace;padding:12px;box-sizing:border-box;outline:none}
+  aside{width:320px;background:linear-gradient(180deg, rgba(255,255,255,0.01), transparent);border-left:1px solid rgba(255,255,255,0.02);padding:12px;border-radius:0}
+  .small{font-size:13px;color:var(--muted)}
+  .controls-col{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+  input[type="text"], input[type="file"], input[type="number"], select{padding:8px;border-radius:6px;border:1px solid rgba(255,255,255,0.03);background:transparent;color:#dbeafe}
+  .split{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .status{margin-top:10px;color:var(--muted);font-size:13px}
+  .hint{font-size:13px;color:#93b6dd}
+  footer{margin-top:12px;color:var(--muted);display:flex;justify-content:space-between}
+  @media (max-width:980px){aside{display:none}.editor-wrap{height:56vh}}
 </style>
 </head>
 <body>
-  <h1>.sol HEX & Binary editor — open, edit, repackage</h1>
-
-  <div class="row">
-    <input id="fileInput" type="file" accept=".sol,application/octet-stream"/>
-    <button id="downloadBtn" disabled>Download edited .sol</button>
-    <button id="resetBtn" class="secondary" disabled>Reset to original</button>
-  </div>
-
-  <div class="split">
-    <div class="col">
-      <label>Hex + ASCII view (editable hex on the right). Edit hex then press Apply Hex Edits.</label>
-      <textarea id="hexView" spellcheck="false" placeholder="Load a .sol to view hex..." ></textarea>
-      <div class="controls" style="margin-top:8px">
-        <button id="applyHexBtn" disabled>Apply Hex Edits</button>
-        <button id="beautifyHexBtn" disabled>Format hex</button>
-        <button id="downloadRawBtn" disabled class="secondary">Download raw (no changes)</button>
-      </div>
-    </div>
-
-    <div class="col">
-      <label>Quick edit: find & replace (ASCII or hex)</label>
-      <div style="margin-bottom:8px" class="searchbar">
-        <input id="findInput" placeholder="Find (hex like: DE AD BE EF or ASCII text)"/>
-        <input id="replaceInput" placeholder="Replace (must be equal byte length for safe in-place replace)"/>
-      </div>
-      <div class="controls" style="margin-bottom:8px">
-        <button id="replaceBtn" disabled>Find & Replace (in-place)</button>
-        <button id="replaceAllBtn" disabled>Replace All</button>
+  <div class="wrap">
+    <header>
+      <div>
+        <h1>.sol Unified Editor — Text + Hex</h1>
+        <div class="small">Open text .sol (Solidity) or binary Flash .sol (Local Shared Object). Edit & export.</div>
       </div>
 
-      <label>Tools</label>
-      <div class="controls" style="margin-bottom:8px">
-        <button id="searchHexBtn" disabled>Find occurrences (hex/ASCII)</button>
-        <button id="exportTxtBtn" disabled>Export found as text</button>
-        <button id="zeroPadBtn" disabled>Zero-pad end (append zeros)</button>
+      <div class="controls" aria-hidden="false">
+        <input id="fileInput" type="file" accept=".sol,application/octet-stream" style="display:none"/>
+        <button id="openBtn">Open</button>
+        <button id="downloadBtn" class="ghost" disabled>Download</button>
+        <button id="resetBtn" class="ghost" disabled>Reset</button>
+      </div>
+    </header>
+
+    <main>
+      <div class="editor-area">
+        <div class="row">
+          <div class="tabs" role="tablist">
+            <div class="tab active" data-tab="text" id="tabText">Text Editor</div>
+            <div class="tab" data-tab="hex" id="tabHex">Hex Editor</div>
+          </div>
+
+          <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
+            <label class="small hint" style="margin-right:6px">Mode:</label>
+            <select id="modeSelect" title="File handling mode">
+              <option value="auto">Auto-detect</option>
+              <option value="text">Force text (UTF-8)</option>
+              <option value="binary">Force binary</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="editor-wrap" id="editorWrap" aria-live="polite">
+          <!-- text view -->
+          <div id="textView" style="display:flex;flex:1;">
+            <div class="gutter" id="gutter">1</div>
+            <div class="text-editor">
+              <textarea id="textArea" class="text" spellcheck="false" placeholder="Open a file to view/edit text..."></textarea>
+            </div>
+          </div>
+
+          <!-- hex view -->
+          <div id="hexViewWrap" style="display:none;flex-direction:column;flex:1;">
+            <div class="hex-editor">
+              <label class="small" style="display:block;margin-bottom:8px">Hex + ASCII view (editable). Edit hex then press Apply.</label>
+              <textarea id="hexArea" class="hex" spellcheck="false" placeholder="Load a binary file to view hex..."></textarea>
+              <div style="margin-top:8px;display:flex;gap:8px">
+                <button id="applyHexBtn" disabled>Apply Hex Edits</button>
+                <button id="formatHexBtn" disabled>Format Hex</button>
+                <button id="downloadRawBtn" disabled class="ghost">Download Raw (original)</button>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div class="note" id="status">Status: waiting for file.</div>
-    </div>
+      <aside>
+        <div class="small">File</div>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <input id="filename" type="text" placeholder="filename.sol" />
+        </div>
+
+        <div class="controls-col">
+          <div style="display:flex;gap:8px">
+            <button id="findBtn" class="ghost">Find</button>
+            <button id="replaceBtn" class="ghost">Replace</button>
+          </div>
+
+          <div class="split">
+            <input id="findInput" placeholder="Find (hex or text)"/>
+            <input id="replaceInput" placeholder="Replace"/>
+          </div>
+
+          <div style="display:flex;gap:8px">
+            <button id="searchHexBtn" class="ghost" disabled>Find (Hex)</button>
+            <button id="exportTxtBtn" class="ghost" disabled>Export snippet</button>
+          </div>
+
+          <div style="display:flex;gap:8px">
+            <button id="zeroPadBtn" class="ghost" disabled>Zero-pad</button>
+            <button id="reencodeBtn" class="ghost" disabled>Re-encode Text→Bytes</button>
+          </div>
+        </div>
+
+        <div class="status" id="status">Status: waiting for file.</div>
+        <div class="hint" style="margin-top:10px">Tip: Use Auto-detect mode to open text .sol (Solidity) or binary Flash .sol. Hex edits are raw byte edits; use with care.</div>
+      </aside>
+    </main>
+
+    <footer>
+      <div class="small">This editor runs fully in your browser — files never leave your machine.</div>
+      <div class="small">Use responsibly; I won't help with cheating/modding games.</div>
+    </footer>
   </div>
 
 <script>
-/*
-  Simple browser-based hex editor for binary files (.sol included).
-  - Loads file into Uint8Array
-  - Shows hexdump with ASCII column
-  - Allows editing hex text and writing back
-  - Supports find/replace (in-place: replacement length must match)
-  - Exports edited blob for download
+/* Unified Text + Hex .sol editor
+   - Maintains `originalBytes` (Uint8Array) and `workingBytes`.
+   - Text editor shows decoded UTF-8 (best effort). Edits can be re-encoded back to bytes (may change length).
+   - Hex editor shows canonical hexdump. Applying hex replaces workingBytes.
+   - Download exports workingBytes as file.
 */
-let originalBytes = null; // Uint8Array original
-let bytes = null;         // working copy
-let filename = "";
+(() => {
+  const fileInput = document.getElementById('fileInput');
+  const openBtn = document.getElementById('openBtn');
+  const downloadBtn = document.getElementById('downloadBtn');
+  const resetBtn = document.getElementById('resetBtn');
+  const modeSelect = document.getElementById('modeSelect');
 
-const fileInput = document.getElementById('fileInput');
-const hexView = document.getElementById('hexView');
-const downloadBtn = document.getElementById('downloadBtn');
-const resetBtn = document.getElementById('resetBtn');
-const applyHexBtn = document.getElementById('applyHexBtn');
-const beautifyHexBtn = document.getElementById('beautifyHexBtn');
-const downloadRawBtn = document.getElementById('downloadRawBtn');
-const findInput = document.getElementById('findInput');
-const replaceInput = document.getElementById('replaceInput');
-const replaceBtn = document.getElementById('replaceBtn');
-const replaceAllBtn = document.getElementById('replaceAllBtn');
-const searchHexBtn = document.getElementById('searchHexBtn');
-const exportTxtBtn = document.getElementById('exportTxtBtn');
-const zeroPadBtn = document.getElementById('zeroPadBtn');
-const status = document.getElementById('status');
+  const tabText = document.getElementById('tabText');
+  const tabHex = document.getElementById('tabHex');
+  const textView = document.getElementById('textView');
+  const hexViewWrap = document.getElementById('hexViewWrap');
 
-fileInput.addEventListener('change', async (e)=>{
-  const f = e.target.files[0];
-  if(!f) return;
-  filename = f.name;
-  const ab = await f.arrayBuffer();
-  originalBytes = new Uint8Array(ab);
-  bytes = new Uint8Array(originalBytes); // copy
-  renderHexView();
-  setEnabled(true);
-  status.textContent = `Loaded ${filename} (${bytes.length} bytes)`;
-});
+  const textArea = document.getElementById('textArea');
+  const gutter = document.getElementById('gutter');
+  const hexArea = document.getElementById('hexArea');
+  const applyHexBtn = document.getElementById('applyHexBtn');
+  const formatHexBtn = document.getElementById('formatHexBtn');
+  const downloadRawBtn = document.getElementById('downloadRawBtn');
 
-function setEnabled(enabled){
-  applyHexBtn.disabled = !enabled;
-  beautifyHexBtn.disabled = !enabled;
-  downloadBtn.disabled = !enabled;
-  resetBtn.disabled = !enabled;
-  downloadRawBtn.disabled = !enabled;
-  replaceBtn.disabled = !enabled;
-  replaceAllBtn.disabled = !enabled;
-  searchHexBtn.disabled = !enabled;
-  exportTxtBtn.disabled = !enabled;
-  zeroPadBtn.disabled = !enabled;
-}
+  const filenameInput = document.getElementById('filename');
+  const status = document.getElementById('status');
 
-function renderHexView(){
-  // show 16 bytes per line: offset 8 hex bytes ascii
-  const perLine = 16;
-  let lines = [];
-  for(let i=0;i<bytes.length;i+=perLine){
-    const slice = bytes.slice(i,i+perLine);
-    const hexs = Array.from(slice).map(v=>v.toString(16).padStart(2,'0').toUpperCase()).join(' ');
-    let ascii = Array.from(slice).map(v=>{
-      return (v >= 0x20 && v <= 0x7E) ? String.fromCharCode(v) : '.';
-    }).join('');
-    lines.push(i.toString(16).padStart(8,'0').toUpperCase() + '  ' + hexs.padEnd(perLine*3-1,' ') + '  |' + ascii + '|');
-  }
-  hexView.value = lines.join('\n');
-}
+  const findInput = document.getElementById('findInput');
+  const replaceInput = document.getElementById('replaceInput');
+  const findBtn = document.getElementById('findBtn');
+  const replaceBtn = document.getElementById('replaceBtn');
+  const searchHexBtn = document.getElementById('searchHexBtn');
+  const exportTxtBtn = document.getElementById('exportTxtBtn');
+  const zeroPadBtn = document.getElementById('zeroPadBtn');
+  const reencodeBtn = document.getElementById('reencodeBtn');
 
-function parseHexTextToBytes(text){
-  // Accept the hex view and convert all two-digit hex sequences to bytes
-  // Remove offsets and ASCII columns if user pasted the whole dump - extract hex tokens
-  const hexOnly = text.replace(/[^0-9A-Fa-f]/g,'');
-  if(hexOnly.length % 2 !== 0) throw new Error("Hex length is odd - probably a stray character.");
-  const out = new Uint8Array(hexOnly.length/2);
-  for(let i=0;i<out.length;i++){
-    out[i] = parseInt(hexOnly.substr(i*2,2),16);
-  }
-  return out;
-}
+  let originalBytes = null; // Uint8Array
+  let workingBytes = null;  // Uint8Array
+  let currentFileName = 'untitled.sol';
 
-applyHexBtn.addEventListener('click', ()=>{
-  try{
-    const edited = parseHexTextToBytes(hexView.value);
-    bytes = edited;
-    status.textContent = `Applied hex edits (${bytes.length} bytes).`;
-  }catch(err){
-    alert('Failed to parse hex: ' + err.message);
-  }
-});
+  // helpers: byte <-> hex
+  const toHex = (b) => b.toString(16).padStart(2,'0').toUpperCase();
 
-beautifyHexBtn.addEventListener('click', ()=>{
-  renderHexView();
-});
-
-downloadRawBtn.addEventListener('click', ()=>{
-  downloadBlob(originalBytes, filename.replace(/(\.sol)?$/i,'.sol'));
-});
-
-downloadBtn.addEventListener('click', ()=>{
-  downloadBlob(bytes, filename.replace(/(\.sol)?$/i,'-edited.sol'));
-});
-
-resetBtn.addEventListener('click', ()=>{
-  if(!originalBytes) return;
-  bytes = new Uint8Array(originalBytes);
-  renderHexView();
-  status.textContent = 'Reset to original bytes.';
-});
-
-function downloadBlob(uint8arr, outName){
-  const blob = new Blob([uint8arr], {type: 'application/octet-stream'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = outName;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
-}
-
-// ===== search & replace utilities =====
-function normalizeSearchInput(str){
-  if(!str) return null;
-  const maybeHex = /^[0-9A-Fa-f\s]+$/.test(str);
-  if(maybeHex){
-    const cleaned = str.replace(/\s+/g,'');
-    if(cleaned.length % 2 !== 0) throw new Error("Hex search must have even number of digits");
-    const arr = new Uint8Array(cleaned.length/2);
-    for(let i=0;i<arr.length;i++) arr[i] = parseInt(cleaned.substr(i*2,2),16);
-    return arr;
-  } else {
-    // ASCII text -> UTF-8 bytes
-    return new TextEncoder().encode(str);
-  }
-}
-
-function findAllOccurrences(haystack, needle){
-  const out = [];
-  for(let i=0;i+needle.length<=haystack.length;i++){
-    let match = true;
-    for(let j=0;j<needle.length;j++){
-      if(haystack[i+j] !== needle[j]) { match=false; break; }
+  // render hex view (16 bytes per line)
+  function renderHexView(){
+    if(!workingBytes) { hexArea.value = ''; return; }
+    const perLine = 16;
+    const lines = [];
+    for(let i=0;i<workingBytes.length;i+=perLine){
+      const slice = workingBytes.slice(i,i+perLine);
+      const hexs = Array.from(slice).map(v=>toHex(v)).join(' ');
+      const ascii = Array.from(slice).map(v=> (v >= 0x20 && v <= 0x7E) ? String.fromCharCode(v) : '.' ).join('');
+      lines.push(i.toString(16).padStart(8,'0').toUpperCase() + '  ' + hexs.padEnd(perLine*3-1,' ') + '  |' + ascii + '|');
     }
-    if(match) out.push(i);
+    hexArea.value = lines.join('\n');
   }
-  return out;
-}
 
-replaceBtn.addEventListener('click', ()=>{
-  try{
-    const needle = normalizeSearchInput(findInput.value);
-    const repl  = normalizeSearchInput(replaceInput.value);
-    if(!needle) { alert('Enter find value'); return; }
-    if(!repl) { alert('Enter replace value'); return; }
-    if(needle.length !== repl.length){
-      if(!confirm('Replacement length differs from match length. This may corrupt AMF offsets. Continue?')) return;
+  function parseHexTextToBytes(text){
+    // Extract only hex pairs (accept pasted hexdumps)
+    const hexOnly = text.replace(/[^0-9A-Fa-f]/g,'');
+    if(hexOnly.length % 2 !== 0) throw new Error("Hex length is odd - stray nibble");
+    const out = new Uint8Array(hexOnly.length/2);
+    for(let i=0;i<out.length;i++) out[i] = parseInt(hexOnly.substr(i*2,2),16);
+    return out;
+  }
+
+  // render text view (decode from workingBytes as UTF-8, fallback to Latin1)
+  function renderTextView(){
+    if(!workingBytes){ textArea.value = ''; updateGutter(); return; }
+    try{
+      const decoded = new TextDecoder('utf-8', { fatal: true }).decode(workingBytes);
+      textArea.value = decoded;
+    }catch(e){
+      // fallback: decode as Latin1 to preserve bytes
+      const arr = Array.from(workingBytes).map(b => String.fromCharCode(b)).join('');
+      textArea.value = arr;
     }
-    const occ = findAllOccurrences(bytes, needle);
-    if(occ.length===0){ alert('No occurrences found'); return; }
-    const i = occ[0];
-    for(let k=0;k<repl.length;k++) bytes[i+k] = repl[k];
+    updateGutter();
+  }
+
+  // update gutter lines
+  function updateGutter(){
+    const lines = (textArea.value.match(/\n/g) || []).length + 1;
+    let out = '';
+    for(let i=1;i<=lines;i++) out += i + '\n';
+    gutter.textContent = out.trim();
+  }
+
+  // set enabled state for controls after load
+  function setLoadedState(yes){
+    applyHexBtn.disabled = !yes;
+    formatHexBtn.disabled = !yes;
+    downloadRawBtn.disabled = !yes;
+    downloadBtn.disabled = !yes;
+    resetBtn.disabled = !yes;
+    searchHexBtn.disabled = !yes;
+    exportTxtBtn.disabled = !yes;
+    zeroPadBtn.disabled = !yes;
+    reencodeBtn.disabled = !yes;
+  }
+
+  // open file handler
+  openBtn.addEventListener('click', ()=> fileInput.click());
+  fileInput.addEventListener('change', async (e) => {
+    const f = e.target.files[0];
+    if(!f) return;
+    await loadFile(f);
+    fileInput.value = '';
+  });
+
+  async function loadFile(file){
+    currentFileName = file.name || 'untitled.sol';
+    filenameInput.value = currentFileName;
+    const ab = await file.arrayBuffer();
+    originalBytes = new Uint8Array(ab);
+    workingBytes = new Uint8Array(originalBytes); // copy
+    status.textContent = `Loaded ${currentFileName} — ${workingBytes.length} bytes`;
+    setLoadedState(true);
+    // mode decision
+    const forced = modeSelect.value;
+    if(forced === 'text') {
+      showTab('text');
+      renderTextView();
+    } else if(forced === 'binary'){
+      showTab('hex');
+      renderHexView();
+    } else {
+      // auto: heuristics: check for many printable chars -> treat as text
+      const printable = Array.from(workingBytes).filter(b => (b >= 0x20 && b <= 0x7E) || b===0x0A || b===0x0D || b===0x09).length;
+      if(printable / workingBytes.length > 0.85 && workingBytes.length > 0 && workingBytes.length < 200000) {
+        showTab('text'); renderTextView();
+      } else {
+        showTab('hex'); renderHexView();
+      }
+    }
+  }
+
+  // tabs
+  function showTab(id){
+    if(id === 'text'){
+      tabText.classList.add('active'); tabHex.classList.remove('active');
+      textView.style.display = 'flex'; hexViewWrap.style.display = 'none';
+    } else {
+      tabHex.classList.add('active'); tabText.classList.remove('active');
+      hexViewWrap.style.display = 'flex'; textView.style.display = 'none';
+    }
+  }
+  tabText.addEventListener('click', ()=> showTab('text'));
+  tabHex.addEventListener('click', ()=> showTab('hex'));
+
+  // gutter sync
+  textArea.addEventListener('input', ()=> updateGutter());
+  textArea.addEventListener('scroll', ()=> {
+    // keep gutter visible alignment
+    // no vertical scroll sync needed because both in same container
+  });
+
+  // apply hex edits
+  applyHexBtn.addEventListener('click', ()=>{
+    try{
+      const edited = parseHexTextToBytes(hexArea.value);
+      workingBytes = edited;
+      status.textContent = `Applied hex edits — ${workingBytes.length} bytes`;
+      // if in text tab, update text
+      if(tabText.classList.contains('active')) renderTextView();
+    }catch(err){
+      alert('Failed to parse hex: ' + err.message);
+    }
+  });
+
+  formatHexBtn.addEventListener('click', ()=> {
     renderHexView();
-    status.textContent = `Replaced first occurrence at 0x${i.toString(16).toUpperCase()}`;
-  }catch(err){ alert('Error: '+err.message); }
-});
+  });
 
-replaceAllBtn.addEventListener('click', ()=>{
-  try{
-    const needle = normalizeSearchInput(findInput.value);
-    const repl  = normalizeSearchInput(replaceInput.value);
-    if(!needle) { alert('Enter find value'); return; }
-    if(!repl) { alert('Enter replace value'); return; }
-    if(needle.length !== repl.length){
-      if(!confirm('Replacement length differs. This will shift bytes - may break the file. Continue?')) return;
-      // If lengths differ, we will create a new buffer with replacements applied (advanced)
-      // For safety, we don't auto-shift; user warned.
-    }
-    const occ = findAllOccurrences(bytes, needle);
-    if(occ.length===0){ alert('No occurrences found'); return; }
-    for(const i of occ){
-      for(let k=0;k<repl.length;k++) bytes[i+k] = repl[k];
-    }
+  downloadRawBtn.addEventListener('click', ()=> {
+    if(!originalBytes) return;
+    downloadBlob(originalBytes, (filenameInput.value || currentFileName).replace(/(\.sol)?$/i,'.sol'));
+  });
+
+  // main download (exports workingBytes)
+  downloadBtn.addEventListener('click', ()=> {
+    if(!workingBytes) return;
+    const outName = (filenameInput.value || currentFileName) || 'untitled.sol';
+    downloadBlob(workingBytes, outName);
+  });
+
+  resetBtn.addEventListener('click', ()=> {
+    if(!originalBytes) return;
+    if(!confirm('Reset to original bytes? Unsaved changes will be lost.')) return;
+    workingBytes = new Uint8Array(originalBytes);
     renderHexView();
-    status.textContent = `Replaced ${occ.length} occurrences`;
-  }catch(err){ alert('Error: '+err.message); }
-});
+    renderTextView();
+    status.textContent = 'Reset to original bytes';
+  });
 
-searchHexBtn.addEventListener('click', ()=>{
-  try{
-    const needle = normalizeSearchInput(findInput.value);
-    if(!needle) { alert('Enter find value'); return; }
-    const occ = findAllOccurrences(bytes, needle);
-    if(occ.length===0) alert('No occurrences found');
+  function downloadBlob(uint8arr, outName){
+    const blob = new Blob([uint8arr], {type: 'application/octet-stream'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href=url; a.download = outName; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+  }
+
+  // find & replace (works for both text and hex depending on active tab)
+  findBtn.addEventListener('click', ()=> doFind(false));
+  replaceBtn.addEventListener('click', ()=> doReplace());
+
+  function normalizeSearchInput(str){
+    if(!str) return null;
+    const isHex = /^[0-9A-Fa-f\s]+$/.test(str);
+    if(isHex){
+      const cleaned = str.replace(/\s+/g,'');
+      if(cleaned.length % 2 !== 0) throw new Error('Hex search must have even number of digits');
+      const arr = new Uint8Array(cleaned.length/2);
+      for(let i=0;i<arr.length;i++) arr[i] = parseInt(cleaned.substr(i*2,2),16);
+      return arr;
+    } else {
+      // text -> UTF-8 bytes
+      return new TextEncoder().encode(str);
+    }
+  }
+
+  function findAllOccurrences(haystack, needle){
+    const out = [];
+    for(let i=0;i+needle.length<=haystack.length;i++){
+      let ok = true;
+      for(let j=0;j<needle.length;j++){ if(haystack[i+j] !== needle[j]) { ok=false; break; } }
+      if(ok) out.push(i);
+    }
+    return out;
+  }
+
+  function doFind(focusText){
+    if(!workingBytes) return alert('Load a file first');
+    try{
+      const needle = normalizeSearchInput(findInput.value);
+      if(!needle) return alert('Enter search term');
+      const occ = findAllOccurrences(workingBytes, needle);
+      if(occ.length === 0) return alert('Not found');
+      const first = occ[0];
+      // if in hex tab, jump to position in hexArea
+      if(tabHex.classList.contains('active')){
+        // compute approximate character position: each byte -> 2 hex + 1 space in view (plus offset area). Simplify: re-render hex and search string position.
+        renderHexView();
+        const hexOnly = hexArea.value.replace(/[^0-9A-Fa-f]/g,'').toUpperCase();
+        const needleHex = Array.from(needle).map(b=>toHex(b)).join('');
+        const idx = hexOnly.indexOf(needleHex);
+        if(idx === -1) { alert('Found at byte offsets but could not map to hex view.'); return; }
+        // find starting char index in original hexArea (approx): search for needleHex while preserving non-hex separators
+        const raw = hexArea.value.toUpperCase();
+        const pos = raw.indexOf(needleHex.slice(0,2)); // fallback
+        hexArea.focus();
+        hexArea.setSelectionRange(pos, pos + needleHex.length);
+        status.textContent = `Found at byte offset 0x${first.toString(16).toUpperCase()}`;
+      } else {
+        // text view: try to show as decoded text
+        renderTextView();
+        const decoder = new TextDecoder('utf-8', {fatal:false});
+        const asText = decoder.decode(workingBytes);
+        const needleText = new TextDecoder().decode(needle);
+        const idx = asText.indexOf(needleText);
+        if(idx !== -1){
+          textArea.focus();
+          textArea.setSelectionRange(idx, idx + needleText.length);
+          status.textContent = `Found at char index ${idx}`;
+        } else {
+          alert('Found bytes but could not map to decoded text (encoding mismatch).');
+        }
+      }
+    }catch(err){ alert('Error: ' + err.message); }
+  }
+
+  function doReplace(){
+    if(!workingBytes) return alert('Load a file first');
+    try{
+      const needle = normalizeSearchInput(findInput.value);
+      const repl = normalizeSearchInput(replaceInput.value);
+      if(!needle) return alert('Enter search value');
+      if(!repl) return alert('Enter replace value');
+      if(needle.length !== repl.length){
+        if(!confirm('Replace length differs from match length. This may corrupt file structure. Continue?')) return;
+        // If different lengths, perform a byte buffer rebuild (simple global replace that shifts bytes)
+        // We'll implement safe Replace All that creates a new buffer with replacements applied.
+        const occ = findAllOccurrences(workingBytes, needle);
+        if(occ.length === 0) return alert('No occurrences found');
+        // create new array with replacements (naive)
+        const out = [];
+        for(let i=0;i<workingBytes.length;){
+          let replaced = false;
+          for(const start of occ){
+            if(i === start){
+              out.push(...Array.from(repl));
+              i += needle.length;
+              replaced = true;
+              break;
+            }
+          }
+          if(!replaced){
+            out.push(workingBytes[i]);
+            i++;
+          }
+        }
+        workingBytes = new Uint8Array(out);
+        renderHexView(); renderTextView();
+        status.textContent = `Replaced ${occ.length} occurrences (length-shifting)`;
+        return;
+      } else {
+        // in-place replace
+        const occ = findAllOccurrences(workingBytes, needle);
+        if(occ.length === 0) return alert('No occurrences found');
+        for(const i of occ){
+          for(let k=0;k<repl.length;k++) workingBytes[i+k] = repl[k];
+        }
+        renderHexView(); renderTextView();
+        status.textContent = `Replaced ${occ.length} occurrences (in-place)`;
+      }
+    }catch(err){ alert('Error: ' + err.message); }
+  }
+
+  // export snippet around first match as text
+  exportTxtBtn.addEventListener('click', ()=>{
+    try{
+      const needle = normalizeSearchInput(findInput.value);
+      if(!needle) return alert('Enter search');
+      const occ = findAllOccurrences(workingBytes, needle);
+      if(occ.length===0) return alert('No occurrences found');
+      const i = occ[0];
+      const start = Math.max(0, i-64);
+      const end = Math.min(workingBytes.length, i+64+needle.length);
+      const slice = workingBytes.slice(start,end);
+      const ascii = Array.from(slice).map(b => (b>=0x20 && b<=0x7E)?String.fromCharCode(b):'.').join('');
+      const blob = new Blob([ascii], {type:'text/plain'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href=url; a.download='extract.txt'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+    }catch(err){ alert('Error: '+err.message); }
+  });
+
+  // find as hex only
+  searchHexBtn.addEventListener('click', ()=> {
+    try{
+      const needle = normalizeSearchInput(findInput.value);
+      if(!needle) return alert('Enter search');
+      const occ = findAllOccurrences(workingBytes, needle);
+      if(occ.length===0) return alert('No occurrences found');
+      alert('Found at offsets: ' + occ.map(o=>'0x'+o.toString(16).toUpperCase()).join(', '));
+    }catch(err){ alert('Error: '+err.message); }
+  });
+
+  zeroPadBtn.addEventListener('click', ()=>{
+    const n = parseInt(prompt('Append how many zero bytes?','64'),10);
+    if(isNaN(n) || n<=0) return;
+    const nb = new Uint8Array(workingBytes.length + n);
+    nb.set(workingBytes,0);
+    workingBytes = nb;
+    renderHexView(); renderTextView();
+    status.textContent = `Appended ${n} zero bytes`;
+  });
+
+  // re-encode text to bytes (useful when editing text and wanting to export)
+  reencodeBtn.addEventListener('click', ()=>{
+    try{
+      const txt = textArea.value;
+      const encoded = new TextEncoder().encode(txt);
+      workingBytes = encoded;
+      renderHexView();
+      status.textContent = `Re-encoded text to ${workingBytes.length} bytes`;
+    }catch(err){ alert('Error: ' + err.message); }
+  });
+
+  // utility: keyboard shortcuts
+  window.addEventListener('keydown', (e) => {
+    const cmd = e.ctrlKey || e.metaKey;
+    if(cmd && e.key.toLowerCase() === 's'){
+      e.preventDefault(); downloadBtn.click();
+    } else if(cmd && e.key.toLowerCase() === 'f'){
+      e.preventDefault(); findInput.focus();
+    } else if(cmd && e.key.toLowerCase() === 'e'){
+      // quick toggle tab
+      e.preventDefault(); showTab(tabText.classList.contains('active') ? 'hex' : 'text');
+    }
+  });
+
+  // drag & drop
+  const editorWrap = document.getElementById('editorWrap');
+  ['dragenter','dragover'].forEach(ev => editorWrap.addEventListener(ev, (e)=>{ e.preventDefault(); editorWrap.style.outline = '2px dashed rgba(125,211,252,0.18)'; }));
+  ['dragleave','drop'].forEach(ev => editorWrap.addEventListener(ev, (e)=>{ editorWrap.style.outline=''; }));
+  editorWrap.addEventListener('drop', async (e)=>{
+    e.preventDefault();
+    const f = e.dataTransfer.files && e.dataTransfer.files[0];
+    if(f) await loadFile(f);
+  });
+
+  // ensure hex/text updates after editing via keyboard
+  hexArea.addEventListener('input', ()=> { /* no-op until Apply */ });
+  textArea.addEventListener('input', ()=> { /* user editing text; to export as bytes re-encode or use re-encode button */ });
+
+  // small helpers for button state when file loaded
+  function togglePostLoadUI(){
+    const yes = !!workingBytes;
+    setLoadedState(yes);
+    if(yes){
+      renderHexView();
+      renderTextView();
+    }
+  }
+
+  // initial: wire up downloadRawBtn and others
+  // initial UI
+  setLoadedState(false);
+  updateGutter();
+
+  // when mode changes, attempt to re-render view from current workingBytes
+  modeSelect.addEventListener('change', ()=>{
+    if(!workingBytes) return;
+    const forced = modeSelect.value;
+    if(forced === 'text') { showTab('text'); renderTextView(); }
+    else if(forced === 'binary'){ showTab('hex'); renderHexView(); }
     else {
-      alert('Found at offsets (hex): ' + occ.map(o=>'0x'+o.toString(16).toUpperCase()).join(', '));
+      // switch via heuristic
+      const printable = Array.from(workingBytes).filter(b => (b >= 0x20 && b <= 0x7E) || b===0x0A || b===0x0D || b===0x09).length;
+      if(printable / workingBytes.length > 0.85 && workingBytes.length < 200000) { showTab('text'); renderTextView(); }
+      else { showTab('hex'); renderHexView(); }
     }
-  }catch(err){ alert('Error: '+err.message); }
-});
+  });
 
-exportTxtBtn.addEventListener('click', ()=>{
-  // quick extract ASCII strings around first match and download as text
-  const needle = normalizeSearchInput(findInput.value);
-  if(!needle){ alert('Enter find value'); return; }
-  const occ = findAllOccurrences(bytes, needle);
-  if(occ.length===0){ alert('No occurrences found'); return; }
-  const i = occ[0];
-  const start = Math.max(0,i-64);
-  const end = Math.min(bytes.length, i+64+needle.length);
-  const slice = bytes.slice(start,end);
-  const ascii = Array.from(slice).map(b=> (b>=0x20 && b<=0x7E) ? String.fromCharCode(b) : '.' ).join('');
-  const blob = new Blob([ascii], {type:'text/plain'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a'); a.href=url; a.download='extract.txt'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
-});
+  // expose a way to load a file via filename input (convenience)
+  filenameInput.addEventListener('change', ()=> {
+    // only updates default name for downloads
+    currentFileName = filenameInput.value || currentFileName;
+  });
 
-zeroPadBtn.addEventListener('click', ()=>{
-  const n = parseInt(prompt("Append how many zero bytes?","64"),10);
-  if(isNaN(n) || n<=0) return;
-  const nb = new Uint8Array(bytes.length + n);
-  nb.set(bytes,0);
-  // zeros already default
-  bytes = nb;
-  renderHexView();
-  status.textContent = `Appended ${n} zero bytes; new length ${bytes.length}`;
-});
+  // after load set UI
+  (function pollLoaded(){ if(workingBytes) togglePostLoadUI(); setTimeout(pollLoaded, 500); })();
+
+})();
 </script>
 </body>
 </html>
